@@ -55,11 +55,6 @@ public final class BudgetedIngredientFilterPolicy {
     }
 
     /**
-     * JEI 15.62 applies type visibility in the constructor. The tooltip index build sets
-     * visibility from {@code isIngredientVisible} alone and can show those elements again.
-     * That combination stays on the budgeted path, which keeps constructor-hidden elements hidden.
-     */
-    /**
      * Same branches as {@code IngredientFilterModernMixin}'s redirect.
      * {@code canDeferFilter} is only true in production when {@code asyncOrDeferred} is true.
      */
@@ -105,6 +100,11 @@ public final class BudgetedIngredientFilterPolicy {
         return Schedule.CAPTURED_WITHOUT_JOB;
     }
 
+    /**
+     * JEI 15.62 applies type visibility in the constructor. The tooltip index build sets
+     * visibility from {@code isIngredientVisible} alone and can show those elements again.
+     * That combination stays on the budgeted path, which keeps constructor-hidden elements hidden.
+     */
     public static boolean rejectTooltipSearchIndex(boolean sortingConfigConstructor, boolean tooltipSearchIndexEnabled) {
         return sortingConfigConstructor && tooltipSearchIndexEnabled;
     }

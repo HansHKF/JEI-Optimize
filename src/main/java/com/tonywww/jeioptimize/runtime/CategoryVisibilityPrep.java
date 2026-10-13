@@ -2,7 +2,6 @@ package com.tonywww.jeioptimize.runtime;
 
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
-import mezz.jei.api.recipe.category.IRecipeCategory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,13 +17,29 @@ public final class CategoryVisibilityPrep {
     private CategoryVisibilityPrep() {
     }
 
-    public static <T> List<T> visibleInOrder(List<T> categories, Predicate<T> hidden) {
-        ArrayList<T> visible = new ArrayList<>();
-        for (T category : categories) {
+    /**
+     * Walks {@code categories} from {@code cursor} and appends entries that are not hidden.
+     * Stops at {@code deadlineNanos} or at the end of the list. Returns the next cursor.
+     */
+    public static <T> int appendVisibleSlice(
+        List<T> visible,
+        List<T> categories,
+        int cursor,
+        Predicate<T> hidden,
+        long deadlineNanos
+    ) {
+        while (cursor < categories.size() && System.nanoTime() < deadlineNanos) {
+            T category = categories.get(cursor++);
             if (!hidden.test(category)) {
                 visible.add(category);
             }
         }
+        return cursor;
+    }
+
+    public static <T> List<T> visibleInOrder(List<T> categories, Predicate<T> hidden) {
+        ArrayList<T> visible = new ArrayList<>();
+        appendVisibleSlice(visible, categories, 0, hidden, Long.MAX_VALUE);
         return List.copyOf(visible);
     }
 
@@ -34,7 +49,7 @@ public final class CategoryVisibilityPrep {
         }
         CategoryVisibilityHost.Worker manager = CategoryVisibilityHost.current();
         if (manager == null) {
-            JeiOptimize.LOGGER.info("JEI category prep skipped: recipe manager is not available");
+            JeiOptimize.LOGGER.debug("JEI category prep skipped: recipe manager is not available");
             return;
         }
         if (manager.visibleCacheReady()) {
