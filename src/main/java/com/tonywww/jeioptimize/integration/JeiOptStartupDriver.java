@@ -7,12 +7,14 @@ import com.tonywww.jeioptimize.index.TooltipSearchShadow;
 import com.tonywww.jeioptimize.index.TooltipFilterBuild;
 import com.tonywww.jeioptimize.instrumentation.JeiOptDiagnostics;
 import com.tonywww.jeioptimize.recipe.JeiRecipeGenerationLimiter;
+import com.tonywww.jeioptimize.runtime.ForgeGuiRegistrationTracker;
 import com.tonywww.jeioptimize.runtime.JeiOptClientTickQueue;
 import com.tonywww.jeioptimize.runtime.JeiOptCacheScope;
 import com.tonywww.jeioptimize.runtime.JeiOptExecutors;
 import com.tonywww.jeioptimize.runtime.JeiOptFilterBootstrap;
 import com.tonywww.jeioptimize.runtime.JeiOptRuntimeState;
 import com.tonywww.jeioptimize.runtime.JeiOptStartupProgressState;
+import net.minecraft.client.Minecraft;
 
 /** Coordinates generation cleanup and runtime-finalization diagnostics around JEI startup. */
 public final class JeiOptStartupDriver {
@@ -53,6 +55,7 @@ public final class JeiOptStartupDriver {
             JeiOptStartupProgressState.cancel(generation);
             JeiOptRuntimeState.invalidate();
             JeiOptRuntimeState.markRuntimeUnloaded();
+            cleanupUnpublishedForgeGui(generation);
             clearRuntimeWork();
             if (cancelledStartup) {
                 JeiOptimize.LOGGER.info(
@@ -62,6 +65,15 @@ public final class JeiOptStartupDriver {
         } catch (RuntimeException | LinkageError e) {
             JeiOptimize.LOGGER.warn("JEI Optimize failed to tear down runtime state", e);
         }
+    }
+
+    private static void cleanupUnpublishedForgeGui(long generation) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.isSameThread()) {
+            ForgeGuiRegistrationTracker.cleanupIfUnpublished(generation);
+            return;
+        }
+        minecraft.execute(() -> ForgeGuiRegistrationTracker.cleanupIfUnpublished(generation));
     }
 
     private static void clearRuntimeWork() {
@@ -80,6 +92,7 @@ public final class JeiOptStartupDriver {
         UltimateCarWorkshopCompactor.clear();
         JeiOptFilterBootstrap.clear();
         JeiOptClientTickQueue.clear();
+        com.tonywww.jeioptimize.runtime.CategoryVisibilityHost.clear();
         JeiOptExecutors.shutdownWorkerExecutor();
     }
 }
