@@ -1178,6 +1178,15 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
                 return false;
             }
         }
+        if ((MIXIN_PACKAGE + "RecipeManagerInternalPrepMixin").equals(mixinClassName)) {
+            boolean compatible = hasCategoryVisibilityPrepContract(readTarget(targetClassName));
+            if (!compatible) {
+                LOGGER.info(
+                    "JEI category prep disabled: RecipeManagerInternal has no verified visibility cache; RecipesGui keeps JEI's own lookup"
+                );
+            }
+            return compatible;
+        }
         if ((MIXIN_PACKAGE + "IngredientFilterModernMixin").equals(mixinClassName)) {
             String branch = modernIngredientFilterConstructorBranch(readTarget(targetClassName));
             if (branch == null) {
@@ -1409,6 +1418,24 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
 
     static boolean hasModernIngredientFilterConstructorContract(ClassNode filter) {
         return modernIngredientFilterConstructorBranch(filter) != null;
+    }
+
+    /**
+     * Fields and {@code isCategoryHidden} used by category preparation.
+     * Constructor parameters differ between JEI 15.62 and 19.27, so the check accepts any {@code <init>}.
+     */
+    static boolean hasCategoryVisibilityPrepContract(ClassNode manager) {
+        if (manager == null) {
+            return false;
+        }
+        return Requirement.field("", "recipeCategories", "Ljava/util/List;").isPresentIn(manager)
+            && Requirement.field("", "recipeCategoriesVisibleCache", "Ljava/util/List;").isPresentIn(manager)
+            && Requirement.method(
+                "",
+                "isCategoryHidden",
+                "(Lmezz/jei/api/recipe/category/IRecipeCategory;Lmezz/jei/api/recipe/IFocusGroup;)Z"
+            ).isPresentIn(manager)
+            && Requirement.method("", "<init>").isPresentIn(manager);
     }
 
     /** {@code sorting-config}, {@code comparator}, or null when neither verified constructor exists. */
