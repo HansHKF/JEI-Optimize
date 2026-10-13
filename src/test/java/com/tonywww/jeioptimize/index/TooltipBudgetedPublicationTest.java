@@ -1,8 +1,11 @@
 package com.tonywww.jeioptimize.index;
 
 import com.tonywww.jeioptimize.runtime.BudgetedIngredientFilterPolicy;
+import com.tonywww.jeioptimize.runtime.BudgetedIngredientFilterPolicy.Capture;
 import com.tonywww.jeioptimize.runtime.BudgetedIngredientFilterPolicy.Publication;
 import com.tonywww.jeioptimize.runtime.BudgetedIngredientFilterPolicy.RedirectObservation;
+import com.tonywww.jeioptimize.runtime.BudgetedIngredientFilterPolicy.Schedule;
+import com.tonywww.jeioptimize.runtime.NativeFilterPublication;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -10,6 +13,9 @@ import org.objectweb.asm.tree.MethodNode;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Checks the budgeted-filter failure and tooltip decisions without Minecraft.
@@ -52,9 +58,16 @@ public final class TooltipBudgetedPublicationTest {
             "a redirect that keeps JEI's own search did not schedule a budgeted build");
         check(BudgetedIngredientFilterPolicy.observe(true, true) == RedirectObservation.BUDGETED_BUILD_SCHEDULED,
             "a redirect that captured an empty search scheduled the budgeted build");
+        verifySortingConfigDoesNotCaptureWithoutAJob();
+        verifyNativePublicationFailureDoesNotPublish();
+        verifyNativePublicationCancellationDoesNotPublish();
+        verifyNativePublicationSuccessPublishesOnce();
 
         ClassNode mixin = mixinClass();
-        check(invokes(mixin, "publication"), "the mixin classifies publication before installing an index");
+        check(invokes(mixin, "captureChoice"), "the redirect uses the tested capture decision");
+        check(invokes(mixin, "scheduleChoice"), "the return inject uses the tested schedule decision");
+        check(invokesOwner(bootstrapClass(), "com/tonywww/jeioptimize/runtime/NativeFilterPublication", "bind"),
+            "scheduleNative publishes through the tested completion binding");
         check(invokes(mixin, "rejectTooltipSearchIndex"), "the mixin asks before using the tooltip index");
         check(invokes(mixin, "observe"), "the mixin distinguishes a contract match from a redirect hit");
         String bytecode = new String(classBytes(), java.nio.charset.StandardCharsets.ISO_8859_1);
@@ -77,6 +90,91 @@ public final class TooltipBudgetedPublicationTest {
         }
     }
 
+    private static void verifySortingConfigDoesNotCaptureWithoutAJob() {
+        boolean[] bits = {false, true};
+        for (boolean lowMemory : bits) {
+            for (boolean canDeferFilter : bits) {
+                for (boolean jeiStartThread : bits) {
+                    for (boolean asyncOrDeferred : bits) {
+                        for (boolean canDeferTooltip : bits) {
+                            for (boolean tooltipMetrics : bits) {
+                                for (boolean sortingConfig : bits) {
+                                    Capture capture = BudgetedIngredientFilterPolicy.captureChoice(
+                                        lowMemory, canDeferFilter, jeiStartThread, asyncOrDeferred, canDeferTooltip, tooltipMetrics);
+                                    boolean captured = capture == Capture.EMPTY || capture == Capture.EMPTY_WITH_STORAGES;
+                                    Schedule schedule = BudgetedIngredientFilterPolicy.scheduleChoice(
+                                        sortingConfig, captured, canDeferTooltip, canDeferFilter, asyncOrDeferred);
+                                    if (captured) {
+                                        check(schedule == Schedule.TOOLTIP || schedule == Schedule.NATIVE
+                                                || schedule == Schedule.BUDGETED_AWAIT,
+                                            "a captured empty search must have a build job");
+                                    } else {
+                                        check(schedule == Schedule.NO_CAPTURE,
+                                            "a full native search must not be given a second build job");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (boolean jeiStartThread : bits) {
+            for (boolean tooltipWouldDefer : bits) {
+                Capture capture = BudgetedIngredientFilterPolicy.captureChoice(
+                    false, false, jeiStartThread, false, tooltipWouldDefer, false);
+                check(capture == Capture.FULL_NATIVE,
+                    "sorting-config with both ingredient-filter flags off keeps JEI's full search");
+            }
+        }
+    }
+
+    private static void verifyNativePublicationFailureDoesNotPublish() {
+        CompletableFuture<String> build = new CompletableFuture<>();
+        CompletableFuture<String> ready = new CompletableFuture<>();
+        AtomicInteger publications = new AtomicInteger();
+        AtomicInteger discards = new AtomicInteger();
+        CompletableFuture<Void> published = NativeFilterPublication.bind(
+            build, ready, search -> publications.incrementAndGet(), () -> discards.incrementAndGet());
+        ready.completeExceptionally(new IllegalStateException("native slice failed"));
+        check(publications.get() == 0, "a failed native build must not publish");
+        check(published.isCompletedExceptionally(), "a failed native build must not finish as success");
+        check(build.isCancelled(), "a failed native build must cancel the in-flight future");
+        check(discards.get() == 1, "a failed native build must discard captured storages");
+        try {
+            published.join();
+            throw new AssertionError("joining a failed native publication must throw");
+        } catch (java.util.concurrent.CompletionException expected) {
+            check(expected.getCause() instanceof IllegalStateException, "the native failure cause must be kept");
+        }
+    }
+
+    private static void verifyNativePublicationCancellationDoesNotPublish() {
+        CompletableFuture<String> build = new CompletableFuture<>();
+        CompletableFuture<String> ready = new CompletableFuture<>();
+        AtomicInteger publications = new AtomicInteger();
+        CompletableFuture<Void> published = NativeFilterPublication.bind(
+            build, ready, search -> publications.incrementAndGet(), () -> { });
+        ready.cancel(false);
+        check(publications.get() == 0, "a cancelled native build must not publish");
+        check(published.isCompletedExceptionally(), "a cancelled native build must not finish as success");
+    }
+
+    private static void verifyNativePublicationSuccessPublishesOnce() {
+        CompletableFuture<String> build = new CompletableFuture<>();
+        CompletableFuture<String> ready = new CompletableFuture<>();
+        AtomicReference<String> publishedSearch = new AtomicReference<>();
+        AtomicInteger discards = new AtomicInteger();
+        CompletableFuture<Void> published = NativeFilterPublication.bind(
+            build, ready, publishedSearch::set, () -> discards.incrementAndGet());
+        ready.complete("filled-index");
+        check("filled-index".equals(publishedSearch.get()), "a completed native index is published");
+        check(!published.isCompletedExceptionally(), "a completed native index finishes successfully");
+        published.join();
+        check(!build.isCancelled(), "success must not cancel the build");
+        check(discards.get() == 0, "success must not discard the published storages");
+    }
+
     private static ClassNode mixinClass() throws IOException {
         ClassNode mixin = new ClassNode();
         new ClassReader(classBytes()).accept(mixin, 0);
@@ -89,6 +187,29 @@ public final class TooltipBudgetedPublicationTest {
             check(source != null, "modern ingredient filter mixin exists");
             return source.readAllBytes();
         }
+    }
+
+    private static ClassNode bootstrapClass() throws IOException {
+        try (InputStream source = TooltipBudgetedPublicationTest.class.getResourceAsStream(
+            "/com/tonywww/jeioptimize/runtime/JeiOptFilterBootstrap.class")) {
+            check(source != null, "filter bootstrap exists");
+            ClassNode bootstrap = new ClassNode();
+            new ClassReader(source).accept(bootstrap, 0);
+            return bootstrap;
+        }
+    }
+
+    private static boolean invokesOwner(ClassNode type, String owner, String methodName) {
+        for (MethodNode method : type.methods) {
+            for (var instruction : method.instructions) {
+                if (instruction instanceof MethodInsnNode call
+                    && call.owner.equals(owner)
+                    && call.name.equals(methodName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean invokes(ClassNode mixin, String methodName) {

@@ -15,6 +15,26 @@ public final class BudgetedIngredientFilterPolicy {
         ABORT_UNPUBLISHED
     }
 
+    public enum Capture {
+        /** Low-memory path. JEI builds the full search directly, with no capture. */
+        LOW_MEMORY,
+        /** Flags do not defer. JEI's full search is observed, with no capture. */
+        FULL_NATIVE,
+        /** Empty search plus native storage builders, for the deferred native route. */
+        EMPTY_WITH_STORAGES,
+        /** Empty search for the tooltip or budgeted-await route. */
+        EMPTY
+    }
+
+    public enum Schedule {
+        NO_CAPTURE,
+        TOOLTIP,
+        NATIVE,
+        BUDGETED_AWAIT,
+        /** A captured empty search with no later job. The caller must not treat that as success. */
+        CAPTURED_WITHOUT_JOB
+    }
+
     public enum RedirectObservation {
         /** Constructor contract matched, but the createElementSearch redirect did not run. */
         NOT_CONFIRMED,
@@ -39,6 +59,52 @@ public final class BudgetedIngredientFilterPolicy {
      * visibility from {@code isIngredientVisible} alone and can show those elements again.
      * That combination stays on the budgeted path, which keeps constructor-hidden elements hidden.
      */
+    /**
+     * Same branches as {@code IngredientFilterModernMixin}'s redirect.
+     * {@code canDeferFilter} is only true in production when {@code asyncOrDeferred} is true.
+     */
+    public static Capture captureChoice(
+        boolean lowMemory,
+        boolean canDeferFilter,
+        boolean jeiStartThread,
+        boolean asyncOrDeferred,
+        boolean canDeferTooltip,
+        boolean tooltipMetrics
+    ) {
+        if (lowMemory) {
+            return Capture.LOW_MEMORY;
+        }
+        if (!canDeferFilter && (!jeiStartThread || !asyncOrDeferred)) {
+            return Capture.FULL_NATIVE;
+        }
+        if (canDeferFilter && !canDeferTooltip && !tooltipMetrics) {
+            return Capture.EMPTY_WITH_STORAGES;
+        }
+        return Capture.EMPTY;
+    }
+
+    public static Schedule scheduleChoice(
+        boolean sortingConfig,
+        boolean captured,
+        boolean canDeferTooltip,
+        boolean canDeferFilter,
+        boolean asyncOrDeferred
+    ) {
+        if (!captured) {
+            return Schedule.NO_CAPTURE;
+        }
+        if (!sortingConfig && canDeferTooltip) {
+            return Schedule.TOOLTIP;
+        }
+        if (canDeferFilter) {
+            return Schedule.NATIVE;
+        }
+        if (asyncOrDeferred) {
+            return Schedule.BUDGETED_AWAIT;
+        }
+        return Schedule.CAPTURED_WITHOUT_JOB;
+    }
+
     public static boolean rejectTooltipSearchIndex(boolean sortingConfigConstructor, boolean tooltipSearchIndexEnabled) {
         return sortingConfigConstructor && tooltipSearchIndexEnabled;
     }

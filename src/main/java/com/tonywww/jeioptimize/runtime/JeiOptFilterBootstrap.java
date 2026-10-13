@@ -131,7 +131,9 @@ public final class JeiOptFilterBootstrap {
             visibility, empty, (search, info) -> search.add(info, manager),
             JeiOptFeatureFlags.ingredientFilterChunkSize(), generation, parser, preserveHidden);
         CompletableFuture<IElementSearch> sealed = build.thenCompose(search -> sealNativeStorages(search, storages, generation));
-        CompletableFuture<Void> published = sealed.thenAccept(search -> {
+        // Failure completes this future exceptionally and does not call publish. The constructor
+        // has already stored the empty search; this callback is the only publication of the filled index.
+        CompletableFuture<Void> published = NativeFilterPublication.bind(build, sealed, search -> {
             if (!Minecraft.getInstance().isSameThread()) {
                 throw new IllegalStateException("Filter publication requires client thread");
             }
@@ -147,15 +149,8 @@ public final class JeiOptFilterBootstrap {
             refresh.run();
             JeiOptimize.LOGGER.info("JEI native budgeted filter published: generation={}, ingredients={}, totalMs={}, retainedBuilders={}",
                 generation, total, (System.nanoTime() - started) / 1_000_000L, storages.size());
-        });
+        }, () -> Minecraft.getInstance().execute(() -> storages.forEach(DeferredNativeSearchStorage::discard)));
         JeiOptStartupProgressState.trackPublication(generation, published);
-        published.whenComplete((ignored, failure) -> {
-            if (failure != null) {
-                build.cancel(false);
-                sealed.cancel(false);
-                Minecraft.getInstance().execute(() -> storages.forEach(DeferredNativeSearchStorage::discard));
-            }
-        });
         GATE.register(generation, published);
         JeiOptRuntimeState.track(build);
         JeiOptRuntimeState.track(published);

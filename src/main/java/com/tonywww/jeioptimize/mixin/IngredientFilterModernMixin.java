@@ -110,28 +110,39 @@ public abstract class IngredientFilterModernMixin {
         IIngredientManager ingredientManager
     ) {
         this.jeiopt$redirectEntered = true;
-        if (TooltipSearchAdapter.lowMemory(clientConfig)) {
-            return jeiopt$invokeCreateElementSearch(clientConfig, elementPrefixParser, elementInfos, ingredientManager);
+        boolean canDeferFilter = JeiOptFilterBootstrap.canDeferFilter();
+        boolean asyncOrDeferred = JeiOptFeatureFlags.asyncIngredientFilter() || JeiOptFeatureFlags.deferredIngredientFilter();
+        boolean canDeferTooltip = JeiOptFilterBootstrap.canDeferTooltip();
+        boolean tooltipMetrics = JeiOptFeatureFlags.tooltipSearchMetrics();
+        switch (BudgetedIngredientFilterPolicy.captureChoice(
+            TooltipSearchAdapter.lowMemory(clientConfig),
+            canDeferFilter,
+            JeiOptExecutors.isJeiStartThread(),
+            asyncOrDeferred,
+            canDeferTooltip,
+            tooltipMetrics
+        )) {
+            case LOW_MEMORY -> {
+                return jeiopt$invokeCreateElementSearch(clientConfig, elementPrefixParser, elementInfos, ingredientManager);
+            }
+            case FULL_NATIVE -> {
+                return TooltipSearchShadow.observeNativeBuild(elementInfos, elementPrefixParser, () ->
+                    jeiopt$invokeCreateElementSearch(clientConfig, elementPrefixParser, elementInfos, ingredientManager));
+            }
+            case EMPTY_WITH_STORAGES -> {
+                var captured = DeferredNativeSearchStorage.capture(() -> jeiopt$invokeCreateElementSearch(
+                    clientConfig, elementPrefixParser, List.of(), ingredientManager));
+                JeiOptFilterBootstrap.capture(elementInfos, ingredientManager, captured.value(), captured.storages());
+                return captured.value();
+            }
+            case EMPTY -> {
+                IElementSearch emptySearch = jeiopt$invokeCreateElementSearch(
+                    clientConfig, elementPrefixParser, List.of(), ingredientManager);
+                JeiOptFilterBootstrap.capture(elementInfos, ingredientManager, emptySearch);
+                return emptySearch;
+            }
         }
-        if (!JeiOptFilterBootstrap.canDeferFilter() && (!JeiOptExecutors.isJeiStartThread()
-            || (!JeiOptFeatureFlags.asyncIngredientFilter() && !JeiOptFeatureFlags.deferredIngredientFilter()))) {
-            return TooltipSearchShadow.observeNativeBuild(elementInfos, elementPrefixParser, () ->
-                jeiopt$invokeCreateElementSearch(clientConfig, elementPrefixParser, elementInfos, ingredientManager));
-        }
-        if (JeiOptFilterBootstrap.canDeferFilter() && !JeiOptFilterBootstrap.canDeferTooltip()
-            && !JeiOptFeatureFlags.tooltipSearchMetrics()) {
-            var captured = DeferredNativeSearchStorage.capture(() -> jeiopt$invokeCreateElementSearch(
-                clientConfig, elementPrefixParser, List.of(), ingredientManager));
-            JeiOptFilterBootstrap.capture(elementInfos, ingredientManager, captured.value(), captured.storages());
-            return captured.value();
-        }
-        IElementSearch emptySearch = jeiopt$invokeCreateElementSearch(clientConfig, elementPrefixParser, List.of(), ingredientManager);
-        JeiOptFilterBootstrap.capture(
-            elementInfos,
-            ingredientManager,
-            emptySearch
-        );
-        return emptySearch;
+        throw new IllegalStateException("Unhandled ingredient filter capture choice");
     }
 
     @Inject(method = JeiOptMixinPlugin.COMPARATOR_INGREDIENT_FILTER_CONSTRUCTOR, at = @At("RETURN"))
@@ -150,12 +161,6 @@ public abstract class IngredientFilterModernMixin {
         boolean redirectEntered = this.jeiopt$redirectEntered;
         this.jeiopt$redirectEntered = false;
         boolean sortingConfig = "sorting-config".equals(branch);
-        if (BudgetedIngredientFilterPolicy.rejectTooltipSearchIndex(
-            sortingConfig, JeiOptFeatureFlags.tooltipSearchIndex())) {
-            JeiOptimize.LOGGER.warn(
-                "JEI tooltip search index rejected on sorting-config constructor: type visibility is not handled; retaining budgeted ingredient filter"
-            );
-        }
         JeiOptFilterBootstrap.Pending pending = redirectEntered ? JeiOptFilterBootstrap.take() : null;
         switch (BudgetedIngredientFilterPolicy.observe(redirectEntered, pending != null)) {
             case NOT_CONFIRMED -> {
@@ -175,29 +180,50 @@ public abstract class IngredientFilterModernMixin {
             case BUDGETED_BUILD_SCHEDULED -> {
             }
         }
+        boolean canDeferFilter = JeiOptFilterBootstrap.canDeferFilter();
+        boolean asyncOrDeferred = JeiOptFeatureFlags.asyncIngredientFilter()
+            || JeiOptFeatureFlags.deferredIngredientFilter();
+        boolean canDeferTooltip = JeiOptFilterBootstrap.canDeferTooltip();
+        if (BudgetedIngredientFilterPolicy.rejectTooltipSearchIndex(
+            sortingConfig, JeiOptFeatureFlags.tooltipSearchIndex())
+            && (canDeferFilter || asyncOrDeferred)) {
+            JeiOptimize.LOGGER.warn(
+                "JEI tooltip search index rejected on sorting-config constructor: type visibility is not handled; retaining budgeted ingredient filter"
+            );
+        }
         JeiOptimize.LOGGER.info("JEI Optimize budgeted ingredient filter redirect confirmed: branch={}", branch);
-
-        if (!sortingConfig && JeiOptFilterBootstrap.canDeferTooltip()) {
-            JeiOptFilterBootstrap.scheduleTooltip(pending.ingredients(), pending.ingredientManager(), this.ingredientVisibility,
-                this.elementPrefixParser, pending.emptySearch(),
-                () -> jeiopt$invokeCreateElementSearch(this.clientConfig, this.elementPrefixParser, List.of(), pending.ingredientManager()),
-                () -> jeiopt$invokeCreateElementSearch(this.clientConfig, this.elementPrefixParser, pending.ingredients(), pending.ingredientManager()),
-                search -> this.elementSearch = search,
-                this::rebuildItemFilter,
-                () -> { invalidateCache(); jeiopt$notifyTooltipReady(); });
-            return;
-        }
-
-        if (JeiOptFilterBootstrap.canDeferFilter()) {
-            JeiOptFilterBootstrap.scheduleNative(pending.ingredients(), pending.ingredientManager(), this.ingredientVisibility,
-                this.elementPrefixParser, pending.emptySearch(), search -> this.elementSearch = search,
-                this::rebuildItemFilter, () -> { invalidateCache(); jeiopt$notifyTooltipReady(); }, pending.storages(),
-                this.jeiopt$preserveConstructorHidden);
-            return;
-        }
-
-        if (JeiOptFeatureFlags.asyncIngredientFilter() || JeiOptFeatureFlags.deferredIngredientFilter()) {
-            jeiopt$scheduleBudgetedBuild(pending, branch);
+        switch (BudgetedIngredientFilterPolicy.scheduleChoice(
+            sortingConfig,
+            true,
+            canDeferTooltip,
+            canDeferFilter,
+            asyncOrDeferred
+        )) {
+            case TOOLTIP -> {
+                JeiOptFilterBootstrap.scheduleTooltip(pending.ingredients(), pending.ingredientManager(), this.ingredientVisibility,
+                    this.elementPrefixParser, pending.emptySearch(),
+                    () -> jeiopt$invokeCreateElementSearch(this.clientConfig, this.elementPrefixParser, List.of(), pending.ingredientManager()),
+                    () -> jeiopt$invokeCreateElementSearch(this.clientConfig, this.elementPrefixParser, pending.ingredients(), pending.ingredientManager()),
+                    search -> this.elementSearch = search,
+                    this::rebuildItemFilter,
+                    () -> { invalidateCache(); jeiopt$notifyTooltipReady(); });
+                return;
+            }
+            case NATIVE -> {
+                JeiOptFilterBootstrap.scheduleNative(pending.ingredients(), pending.ingredientManager(), this.ingredientVisibility,
+                    this.elementPrefixParser, pending.emptySearch(), search -> this.elementSearch = search,
+                    this::rebuildItemFilter, () -> { invalidateCache(); jeiopt$notifyTooltipReady(); }, pending.storages(),
+                    this.jeiopt$preserveConstructorHidden);
+                return;
+            }
+            case BUDGETED_AWAIT -> {
+                jeiopt$scheduleBudgetedBuild(pending, branch);
+                return;
+            }
+            case CAPTURED_WITHOUT_JOB -> throw new IllegalStateException(
+                "JEI budgeted ingredient filter captured an empty search on branch " + branch + " but scheduled no build");
+            case NO_CAPTURE -> throw new IllegalStateException(
+                "JEI budgeted ingredient filter lost a captured search on branch " + branch);
         }
     }
 
