@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
- * Completion wiring for {@code scheduleNative}, the path the local.2 client run used.
+ * Completion wiring for {@code scheduleNative}.
  * The await/abort handler in the mixin is a different route and does not run here.
  * {@code publish} runs only after {@code ready} completes normally. A failure or
  * cancellation cancels the build and does not call {@code publish}.
