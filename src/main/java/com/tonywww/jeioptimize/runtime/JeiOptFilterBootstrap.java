@@ -113,6 +113,13 @@ public final class JeiOptFilterBootstrap {
     public static void scheduleNative(List<? extends IListElementInfo<?>> infos, IIngredientManager manager,
         IIngredientVisibility visibility, ElementPrefixParser parser, IElementSearch empty,
         Consumer<IElementSearch> publish, Runnable rebuild, Runnable refresh, List<DeferredNativeSearchStorage> storages) {
+        scheduleNative(infos, manager, visibility, parser, empty, publish, rebuild, refresh, storages, false);
+    }
+
+    public static void scheduleNative(List<? extends IListElementInfo<?>> infos, IIngredientManager manager,
+        IIngredientVisibility visibility, ElementPrefixParser parser, IElementSearch empty,
+        Consumer<IElementSearch> publish, Runnable rebuild, Runnable refresh, List<DeferredNativeSearchStorage> storages,
+        boolean preserveHidden) {
         long generation = JeiOptRuntimeState.currentGeneration();
         long initialResources = resourceRevision();
         String initialLanguage = Minecraft.getInstance().getLanguageManager().getSelected();
@@ -122,7 +129,7 @@ public final class JeiOptFilterBootstrap {
         int total = infos.size();
         CompletableFuture<IElementSearch> build = AsyncIngredientFilterBuilder.buildBudgetedAsync(infos,
             visibility, empty, (search, info) -> search.add(info, manager),
-            JeiOptFeatureFlags.ingredientFilterChunkSize(), generation, parser);
+            JeiOptFeatureFlags.ingredientFilterChunkSize(), generation, parser, preserveHidden);
         CompletableFuture<IElementSearch> sealed = build.thenCompose(search -> sealNativeStorages(search, storages, generation));
         CompletableFuture<Void> published = sealed.thenAccept(search -> {
             if (!Minecraft.getInstance().isSameThread()) {
