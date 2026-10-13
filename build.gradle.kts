@@ -182,7 +182,10 @@ val tooltipTests = listOf(
     "index.TooltipBackendTest",
     "runtime.TooltipCaptureContextTest",
     "index.TooltipSearchIndexTest",
-    "TooltipAbiTest"
+    "TooltipAbiTest",
+    "TooltipCategoryVisibilityOrderTest",
+    "TooltipMixinBoundaryTest",
+    "TooltipForgeGuiLifecycleTest"
 ).map { testClass ->
     tasks.register<JavaExec>("run" + testClass.substringAfterLast('.')) {
         dependsOn(compileTooltipTests)
@@ -200,6 +203,13 @@ val tooltipTests = listOf(
         }
     }
 }
+tasks.named<JavaExec>("runTooltipMixinBoundaryTest") {
+    dependsOn(tasks.named("jar"))
+    doFirst {
+        args(tasks.named("jar").get().outputs.files.singleFile.absolutePath)
+    }
+}
+
 tasks.register("tooltipTest") {
     group = "verification"
     description = "Runs tooltip capture, reference substring index and ABI tests without launching Minecraft."
