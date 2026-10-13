@@ -183,6 +183,7 @@ val tooltipTests = listOf(
     "runtime.TooltipCaptureContextTest",
     "index.TooltipSearchIndexTest",
     "TooltipAbiTest",
+    "TooltipCategoryPrepContractTest",
     "TooltipCategoryVisibilityOrderTest",
     "TooltipMixinBoundaryTest",
     "TooltipForgeGuiLifecycleTest"
@@ -203,6 +204,12 @@ val tooltipTests = listOf(
         }
     }
 }
+tasks.named<JavaExec>("runTooltipCategoryPrepContractTest") {
+    findProperty("categoryPrep.jars")?.toString()?.let { jars ->
+        args(jars.split(';').filter(String::isNotBlank))
+    }
+}
+
 tasks.named<JavaExec>("runTooltipMixinBoundaryTest") {
     dependsOn(tasks.named("jar"))
     doFirst {
