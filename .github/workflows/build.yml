@@ -1,0 +1,52 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - ci/github-build
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+
+      - name: Build Forge 1.20.1 and NeoForge 1.21.1
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon \
+            :1.20.1-forge:build \
+            :1.21.1-neoforge:build \
+            -Dorg.gradle.java.installations.paths="${JAVA_HOME_17_X64},${JAVA_HOME_21_X64}"
+
+      - name: Select distributable jars
+        run: |
+          find versions/1.20.1-forge/build/libs versions/1.21.1-neoforge/build/libs -name '*.jar' -print
+          test -n "$(find versions/1.20.1-forge/build/libs -name '*.jar' ! -name '*-sources.jar')"
+          test -n "$(find versions/1.21.1-neoforge/build/libs -name '*.jar' ! -name '*-sources.jar')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: justenoughthreads-1.20.1-forge
+          path: |
+            versions/1.20.1-forge/build/libs/*.jar
+            !versions/1.20.1-forge/build/libs/*-sources.jar
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: justenoughthreads-1.21.1-neoforge
+          path: |
+            versions/1.21.1-neoforge/build/libs/*.jar
+            !versions/1.21.1-neoforge/build/libs/*-sources.jar
+          if-no-files-found: error
