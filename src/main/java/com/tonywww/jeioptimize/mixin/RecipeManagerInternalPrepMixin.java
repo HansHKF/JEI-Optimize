@@ -2,6 +2,7 @@ package com.tonywww.jeioptimize.mixin;
 
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.runtime.CategoryVisibilityHost;
+import com.tonywww.jeioptimize.runtime.CategoryVisibilityPrep;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.library.focus.FocusGroup;
@@ -33,10 +34,6 @@ public abstract class RecipeManagerInternalPrepMixin implements CategoryVisibili
     private int jeiopt$cursor;
     @Unique
     private ArrayList<IRecipeCategory<?>> jeiopt$building;
-    @Unique
-    private int jeiopt$slices;
-    @Unique
-    private long jeiopt$startedNs;
     @Unique
     private boolean jeiopt$publishedCache;
 
@@ -74,17 +71,14 @@ public abstract class RecipeManagerInternalPrepMixin implements CategoryVisibili
         if (jeiopt$building == null) {
             jeiopt$building = new ArrayList<>();
             jeiopt$cursor = 0;
-            jeiopt$slices = 0;
-            jeiopt$startedNs = System.nanoTime();
         }
-        IFocusGroup emptyFocus = FocusGroup.EMPTY;
-        while (jeiopt$cursor < recipeCategories.size() && System.nanoTime() < deadlineNanos) {
-            IRecipeCategory<?> category = recipeCategories.get(jeiopt$cursor++);
-            if (!jeiopt$isCategoryHidden(category, emptyFocus)) {
-                jeiopt$building.add(category);
-            }
-        }
-        jeiopt$slices++;
+        jeiopt$cursor = CategoryVisibilityPrep.appendVisibleSlice(
+            jeiopt$building,
+            recipeCategories,
+            jeiopt$cursor,
+            category -> jeiopt$callIsCategoryHidden(category, FocusGroup.EMPTY),
+            deadlineNanos
+        );
         if (jeiopt$cursor < recipeCategories.size()) {
             return false;
         }
@@ -94,20 +88,13 @@ public abstract class RecipeManagerInternalPrepMixin implements CategoryVisibili
         }
         recipeCategoriesVisibleCache = List.copyOf(jeiopt$building);
         jeiopt$publishedCache = true;
-        JeiOptimize.LOGGER.info(
-            "JEI category prep published: categories={}, visible={}, slices={}, prepMs={}",
+        JeiOptimize.LOGGER.debug(
+            "JEI category prep published: categories={}, visible={}",
             recipeCategories.size(),
-            jeiopt$building.size(),
-            jeiopt$slices,
-            (System.nanoTime() - jeiopt$startedNs) / 1_000_000L
+            jeiopt$building.size()
         );
         jeiopt$building = null;
         return true;
-    }
-
-    @Unique
-    private boolean jeiopt$isCategoryHidden(IRecipeCategory<?> category, IFocusGroup focus) {
-        return jeiopt$callIsCategoryHidden(category, focus);
     }
 
     @org.spongepowered.asm.mixin.gen.Invoker("isCategoryHidden")
