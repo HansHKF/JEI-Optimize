@@ -1,10 +1,13 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.RecipeIngredientAccess;
+
+import com.tonywww.jeioptimize.recipe.JeiIngredientUid;
+
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.ingredients.IIngredientHelper;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -65,7 +68,7 @@ public final class MekanismNutritionalRecipeCompactor {
                     if (!(representation instanceof ItemStack stack) || stack.isEmpty()) {
                         return recipes;
                     }
-                    group.inputs().putIfAbsent(helper.getUniqueId(stack, UidContext.Recipe), stack);
+                    group.inputs().putIfAbsent(JeiIngredientUid.recipe(helper, stack), stack);
                 }
             }
 
@@ -79,7 +82,7 @@ public final class MekanismNutritionalRecipeCompactor {
                 if (group.inputs().isEmpty()) {
                     return recipes;
                 }
-                Ingredient merged = Ingredient.of(group.inputs().values().stream());
+                Ingredient merged = RecipeIngredientAccess.ofStacks(group.inputs().values().stream());
                 Object mekanismIngredient = fromIngredient.getParameterCount() == 1
                     ? fromIngredient.invoke(creator, merged)
                     : fromIngredient.invoke(creator, merged, 1);
@@ -160,7 +163,7 @@ public final class MekanismNutritionalRecipeCompactor {
         }
     }
 
-    private record Group(Object firstRecipe, Object output, Map<String, ItemStack> inputs) {
+    private record Group(Object firstRecipe, Object output, Map<Object, ItemStack> inputs) {
         private Group(Object firstRecipe, Object output) {
             this(firstRecipe, output, new LinkedHashMap<>());
         }

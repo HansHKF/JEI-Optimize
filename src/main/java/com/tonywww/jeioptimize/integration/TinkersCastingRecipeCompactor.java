@@ -1,10 +1,11 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.JeiIngredientUid;
+
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientType;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -88,7 +89,7 @@ public final class TinkersCastingRecipeCompactor {
                         throw new ReflectiveOperationException("Tinkers display recipe contains an invalid FluidStack");
                     }
                     fluidKeys.add(new FluidKey(
-                        fluidHelper.getUniqueId(fluid, UidContext.Recipe),
+                        JeiIngredientUid.recipe(fluidHelper, fluid),
                         ((Number) fluidAmountMethod.invoke(fluid)).intValue(),
                         String.valueOf(fluidTagMethod.invoke(fluid))
                     ));
@@ -190,9 +191,7 @@ public final class TinkersCastingRecipeCompactor {
     }
 
     private static Pair pair(ItemStack cast, ItemStack output, IIngredientHelper<ItemStack> helper) {
-        String uid = helper.getUniqueId(cast, UidContext.Recipe)
-            + '\u0000'
-            + helper.getUniqueId(output, UidContext.Recipe);
+        Object uid = List.of(JeiIngredientUid.recipe(helper, cast), JeiIngredientUid.recipe(helper, output));
         return new Pair(uid, cast, output);
     }
 
@@ -227,7 +226,7 @@ public final class TinkersCastingRecipeCompactor {
     ) {
     }
 
-    private record FluidKey(String uid, int amount, String tag) {
+    private record FluidKey(Object uid, int amount, String tag) {
     }
 
     private static final class Group {
@@ -237,7 +236,7 @@ public final class TinkersCastingRecipeCompactor {
         private final List<Object> fluids;
         private final int coolingTime;
         private final boolean consumed;
-        private final Map<String, Pair> pairs = new LinkedHashMap<>();
+        private final Map<Object, Pair> pairs = new LinkedHashMap<>();
         private int count;
 
         private Group(
@@ -280,12 +279,12 @@ public final class TinkersCastingRecipeCompactor {
             return consumed;
         }
 
-        private Map<String, Pair> pairs() {
+        private Map<Object, Pair> pairs() {
             return pairs;
         }
     }
 
-    private record Pair(String uid, ItemStack cast, ItemStack output) {
+    private record Pair(Object uid, ItemStack cast, ItemStack output) {
     }
 
     private record Entry(Object recipe, GroupKey key) {

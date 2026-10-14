@@ -16,7 +16,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "mezz.jei.library.plugins.vanilla.grindstone.GrindstoneRecipeMaker", remap = false)
 public abstract class GrindstoneDisenchantModernMixin {
     @Inject(
+        //? if >=26.1 {
+        /*method = "canEnchant(Lmezz/jei/common/platform/IPlatformRecipeHelper;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/core/Holder;Lnet/minecraft/resources/ResourceLocation;)Z",
+        *///?} else {
         method = "canEnchant(Lmezz/jei/common/platform/IPlatformRecipeHelper;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/enchantment/Enchantment;Lnet/minecraft/resources/ResourceLocation;)Z",
+        //?}
         at = @At("RETURN"),
         cancellable = true,
         require = 1
@@ -24,7 +28,11 @@ public abstract class GrindstoneDisenchantModernMixin {
     private static void jeiOptimize$limitDisenchantmentItems(
         IPlatformRecipeHelper platformHelper,
         ItemStack stack,
+        //? if >=26.1 {
+        /*net.minecraft.core.Holder<Enchantment> enchantment,
+        *///?} else {
         Enchantment enchantment,
+        //?}
         ResourceLocation enchantmentId,
         CallbackInfoReturnable<Boolean> callbackInfo
     ) {

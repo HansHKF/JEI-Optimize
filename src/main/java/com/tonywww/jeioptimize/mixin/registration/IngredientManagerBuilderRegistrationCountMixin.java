@@ -22,6 +22,9 @@ public abstract class IngredientManagerBuilderRegistrationCountMixin {
         Collection<V> allIngredients,
         IIngredientHelper<V> ingredientHelper,
         IIngredientRenderer<V> ingredientRenderer,
+        //? if >=26.1 {
+        /*com.mojang.serialization.Codec<V> ingredientCodec,
+        *///?}
         CallbackInfo callbackInfo
     ) {
         JeiPluginCallContext.record(JeiPluginCallContext.RegistrationMetric.INGREDIENT_TYPES, 1);

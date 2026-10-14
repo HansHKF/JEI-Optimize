@@ -16,13 +16,20 @@ import java.util.List;
 @Mixin(targets = "mezz.jei.library.plugins.vanilla.anvil.AnvilRecipeMaker", remap = false)
 public abstract class AnvilRepresentativeContextMixin {
     @Inject(
-        method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;)Ljava/util/List;",
+        method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;"
+        //? if >=26.1 {
+        /*+ "Lnet/minecraft/util/context/ContextMap;"
+        *///?}
+        + ")Ljava/util/List;",
         at = @At("HEAD"),
         require = 1
     )
     private static void jeiOptimize$beginRepresentativeSelection(
         IVanillaRecipeFactory vanillaRecipeFactory,
         IIngredientManager ingredientManager,
+        //? if >=26.1 {
+        /*net.minecraft.util.context.ContextMap contextMap,
+        *///?}
         CallbackInfoReturnable<List<?>> callbackInfo
     ) {
         if (JeiOptFeatureFlags.optimizeAnvilRepresentatives()
@@ -37,13 +44,20 @@ public abstract class AnvilRepresentativeContextMixin {
     }
 
     @Inject(
-        method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;)Ljava/util/List;",
+        method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;"
+        //? if >=26.1 {
+        /*+ "Lnet/minecraft/util/context/ContextMap;"
+        *///?}
+        + ")Ljava/util/List;",
         at = @At("RETURN"),
         require = 1
     )
     private static void jeiOptimize$endRepresentativeSelection(
         IVanillaRecipeFactory vanillaRecipeFactory,
         IIngredientManager ingredientManager,
+        //? if >=26.1 {
+        /*net.minecraft.util.context.ContextMap contextMap,
+        *///?}
         CallbackInfoReturnable<List<?>> callbackInfo
     ) {
         JeiRecipeGenerationLimiter.endAnvil();

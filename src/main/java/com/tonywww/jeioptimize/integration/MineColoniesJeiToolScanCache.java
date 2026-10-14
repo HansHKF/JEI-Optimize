@@ -93,11 +93,19 @@ public final class MineColoniesJeiToolScanCache {
 
         private static boolean hasNoTweaksItemTags() {
             return BuiltInRegistries.ITEM.getTags().noneMatch(tag -> {
+                //? if >=26.1 {
+                /*ResourceLocation location = tag.key().location();
+                *///?} else {
                 ResourceLocation location = tag.getFirst().location();
+                //?}
                 String path = location.getPath();
                 boolean relevant = TWEAKS_NAMESPACE.equals(location.getNamespace())
                     && (path.startsWith(CUSTOM_TOOL_PREFIX) || path.startsWith(BLACKLIST_PREFIX));
+                //? if >=26.1 {
+                /*return relevant && tag.iterator().hasNext();
+                *///?} else {
                 return relevant && tag.getSecond().iterator().hasNext();
+                //?}
             });
         }
 

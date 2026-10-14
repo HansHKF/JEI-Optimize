@@ -70,6 +70,7 @@ public final class JeiOptConfig {
     static final ConfigValue<String> CONTENT_SKIP_CREATIVE_TABS;
 
     static final BooleanValue DIAGNOSTICS_PLUGIN_TIMING;
+    static final BooleanValue DIAGNOSTICS_MEMORY;
     static final BooleanValue DIAGNOSTICS_REGISTRATION_COUNTS;
     static final BooleanValue DIAGNOSTICS_STALL_WATCHDOG;
     static final IntValue DIAGNOSTICS_STALL_THRESHOLD_SECONDS;
@@ -264,6 +265,12 @@ public final class JeiOptConfig {
         DIAGNOSTICS_PLUGIN_TIMING = builder
             .comment("Enable per-plugin and per-stage JEI timing logs.")
             .define("pluginTiming", false);
+        DIAGNOSTICS_MEMORY = builder
+            .comment(
+                "Sample JVM heap use every 250 ms during JEI startup and report observed peaks and GC changes.",
+                "This is whole-JVM usage, not JEI-owned memory or post-GC retained heap. Does not request GC.",
+                "Disabled by default. The diagnostic sampler stops when startup finishes or is cancelled.")
+            .define("memoryDiagnostics", false);
         DIAGNOSTICS_REGISTRATION_COUNTS = builder
             .comment("Enable JEI registration count diagnostics.")
             .define("registrationCounts", false);

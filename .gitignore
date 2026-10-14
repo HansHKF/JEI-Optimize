@@ -8,6 +8,7 @@ build/
 # Minecraft / Forge run output
 run/
 runs/
+run-server/
 logs/
 crash-reports/
 saves/

@@ -2,7 +2,6 @@ package com.tonywww.jeioptimize.mixin.compat;
 
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.integration.GtceuRecipeRegistrationBatcher;
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IRecipeRegistration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -42,7 +41,7 @@ public abstract class GtceuRecipeRegistrationMixin {
     )
     private static <T> void jeiOptimize$registerRecipesInBatches(
         IRecipeRegistration registration,
-        RecipeType<T> recipeType,
+        mezz.jei.api.recipe.RecipeType<T> recipeType,
         List<T> recipes
     ) {
         if (!GtceuRecipeRegistrationBatcher.isDeferredCopy(recipes)) {

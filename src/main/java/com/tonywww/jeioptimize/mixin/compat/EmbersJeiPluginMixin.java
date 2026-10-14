@@ -3,7 +3,6 @@ package com.tonywww.jeioptimize.mixin.compat;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.tonywww.jeioptimize.integration.EmbersDawnstoneAnvilCompactor;
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IRecipeRegistration;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -23,7 +22,7 @@ public abstract class EmbersJeiPluginMixin {
     )
     private static <T> void jeiOptimize$compactDawnstoneAnvilRecipes(
         IRecipeRegistration registration,
-        RecipeType<T> recipeType,
+        mezz.jei.api.recipe.RecipeType<T> recipeType,
         List<T> recipes,
         Operation<Void> original
     ) {

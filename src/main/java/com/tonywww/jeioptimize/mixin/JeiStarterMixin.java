@@ -60,10 +60,12 @@ public abstract class JeiStarterMixin {
             } catch (Throwable t) {
                 if (JeiOptExecutors.isJeiStartCancellation(t)
                     || !JeiOptRuntimeState.isCurrent(generation)) {
+                    com.tonywww.jeioptimize.instrumentation.JeiMemoryDiagnostics.finish(generation, "cancelled");
                     JeiOptimize.LOGGER.info("JEI Optimize stopped a cancelled JEI startup before runtime publication.");
                     JeiOptStartupProgressState.cancel(generation);
                     return;
                 }
+                com.tonywww.jeioptimize.instrumentation.JeiMemoryDiagnostics.finish(generation, "failed");
                 JeiOptStartupProgressState.cancel(generation);
                 JeiOptimize.LOGGER.error("JEI failed to start on the background thread", t);
                 minecraft.execute(() -> {
@@ -78,5 +80,11 @@ public abstract class JeiStarterMixin {
     @Inject(method = "stop", at = @At("HEAD"))
     private void jeiOptimize$cancelJeiStartup(CallbackInfo ci) {
         JeiOptStartupDriver.onJeiStopping();
+    }
+
+    @Inject(method = "start", at = @At("RETURN"))
+    private void jeiOptimize$finishMemoryDiagnostics(CallbackInfo ci) {
+        com.tonywww.jeioptimize.instrumentation.JeiMemoryDiagnostics.finish(
+            JeiOptExecutors.currentJeiStartGeneration(), "started");
     }
 }

@@ -13,6 +13,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Pseudo
 @Mixin(targets = "mezz.jei.gui.input.ClientInputHandler", remap = false)
 public abstract class JeiClientInputGuardMixin {
+    //? if >=26.1 {
+    /*@Inject(method = "onKeyboardCharTypedPre(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/input/CharacterEvent;)Z",
+        at = @At("HEAD"), cancellable = true, require = 1)
+    private void jeiopt$guardCharacter(Screen screen, @Coerce Object event, CallbackInfoReturnable<Boolean> callback) {
+        if (JeiOptStartupProgressState.blocksJeiInput()) { callback.setReturnValue(false); }
+    }
+
+    @Inject(method = "onKeyboardCharTypedPost(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/input/CharacterEvent;)V",
+        at = @At("HEAD"), cancellable = true, require = 1)
+    private void jeiopt$guardCharacterPost(Screen screen, @Coerce Object event, CallbackInfo callback) {
+        if (JeiOptStartupProgressState.blocksJeiInput()) { callback.cancel(); }
+    }
+
+    @Inject(method = "onGuiMouseDragged(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/input/MouseButtonEvent;DD)Z",
+        at = @At("HEAD"), cancellable = true, require = 1)
+    private void jeiopt$guardDrag(Screen screen, @Coerce Object event, double x, double y, CallbackInfoReturnable<Boolean> callback) {
+        if (JeiOptStartupProgressState.blocksJeiInput()) { callback.setReturnValue(false); }
+    }
+    *///?}
     @Inject(
         method = {
             "onKeyboardKeyPressedPre(Lnet/minecraft/client/gui/screens/Screen;Lmezz/jei/gui/input/UserInput;)Z",

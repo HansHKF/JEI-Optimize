@@ -1,10 +1,13 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.JeiIngredientUid;
+
+import com.tonywww.jeioptimize.recipe.RecipeIngredientAccess;
+
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.ingredients.IIngredientHelper;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -71,9 +74,9 @@ public final class ThermalStirlingRecipeCompactor {
                     if (!(input instanceof Ingredient ingredient)) {
                         return recipes;
                     }
-                    for (ItemStack stack : ingredient.getItems()) {
+                    for (ItemStack stack : RecipeIngredientAccess.items(ingredient)) {
                         if (!stack.isEmpty()) {
-                            group.inputs().putIfAbsent(helper.getUniqueId(stack, UidContext.Recipe), stack);
+                            group.inputs().putIfAbsent(JeiIngredientUid.recipe(helper, stack), stack);
                         }
                     }
                 }
@@ -84,7 +87,7 @@ public final class ThermalStirlingRecipeCompactor {
                 if (group.inputs().isEmpty()) {
                     return recipes;
                 }
-                Ingredient merged = Ingredient.of(group.inputs().values().stream());
+                Ingredient merged = RecipeIngredientAccess.ofStacks(group.inputs().values().stream());
                 compacted.add(constructor.newInstance(
                     getRecipeId(group.firstRecipe()),
                     group.energy(),
@@ -126,7 +129,7 @@ public final class ThermalStirlingRecipeCompactor {
         Object firstRecipe,
         int energy,
         List<?> inputFluids,
-        Map<String, ItemStack> inputs
+        Map<Object, ItemStack> inputs
     ) {
         private Group(Object firstRecipe, int energy, List<?> inputFluids) {
             this(firstRecipe, energy, inputFluids, new LinkedHashMap<>());

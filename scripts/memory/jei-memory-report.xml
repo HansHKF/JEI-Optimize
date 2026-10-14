@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="JEI and JET memory owners" xmlns="http://www.eclipse.org/mat/report.xsd">
+  <param key="filename_suffix" value="jei_memory" />
+  <param key="limit" value="60" />
+  <query name="JEI runtime retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM mezz.jei.library.runtime.JeiRuntime r"</command></query>
+  <query name="JEI filter retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM mezz.jei.gui.ingredients.IngredientFilter r"</command></query>
+  <query name="JEI recipe manager retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM mezz.jei.library.recipes.RecipeManagerInternal r"</command></query>
+  <query name="JEI ingredient manager retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM mezz.jei.library.ingredients.IngredientManager r"</command></query>
+  <query name="Modern search storage retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM mezz.jei.common.search.BakedSubstringIndexSearchStorage r"</command></query>
+  <query name="Legacy search storage retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM mezz.jei.core.search.suffixtree.GeneralizedSuffixTree r"</command></query>
+  <query name="JEI 19 suffix tree retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM mezz.jei.common.search.GeneralizedSuffixTreeSearchStorage r"</command></query>
+  <query name="JET tooltip backend retained heap"><command>oql "SELECT r, r.@retainedHeapSize AS retainedBytes FROM com.tonywww.jeioptimize.index.TooltipSearchBackend r"</command></query>
+  <query name="Dominator tree grouped by class"><command>dominator_tree -groupby BY_CLASS</command></query>
+</section>

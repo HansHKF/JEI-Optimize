@@ -5,6 +5,7 @@ pluginManagement {
         maven("https://maven.architectury.dev")
         maven("https://maven.fabricmc.net/")
         maven("https://maven.minecraftforge.net/")
+        maven("https://maven.neoforged.net/releases")
         maven("https://maven.kikugie.dev/releases")
         maven("https://maven.kikugie.dev/snapshots")
     }
@@ -21,6 +22,7 @@ stonecutter {
     create(rootProject) {
         version("1.20.1-forge", "1.20.1")
         version("1.21.1-neoforge", "1.21.1")
+        version("26.1.2-neoforge", "26.1.2").buildscript("build-neoforge26.gradle.kts")
         vcsVersion = "1.20.1-forge"
     }
 }

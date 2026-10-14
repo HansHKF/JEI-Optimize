@@ -22,6 +22,28 @@ public final class JeiMainThreadPluginPolicy {
     private JeiMainThreadPluginPolicy() {
     }
 
+    public static boolean requiresMainThread(String pluginUid, String phase, boolean fontBakingRequiresMainThread) {
+        if (pluginUid == null || "blue_skies:jei_plugin".equals(pluginUid)
+            || "delightful:jei_plugin".equals(pluginUid)) {
+            return true;
+        }
+        if ("jei:minecraft".equals(pluginUid) && "Registering ingredients".equals(phase)) {
+            return true;
+        }
+        if (("jei:forge_gui".equals(pluginUid) || "jei:neoforge_gui".equals(pluginUid))
+            && "Registering Runtime".equals(phase)) {
+            return true;
+        }
+        // Ender IO removes runtime ingredients while registering its recipes.
+        if ("enderio:base".equals(pluginUid) && "Registering recipes".equals(phase)) {
+            return true;
+        }
+        // Minecraft 26.1+ font measurement can upload glyphs when categories build their UI
+        // or when Occultism lays out ritual text during recipe registration.
+        return fontBakingRequiresMainThread && ("Registering categories".equals(phase)
+            || "occultism:jei".equals(pluginUid) && "Registering recipes".equals(phase));
+    }
+
     static boolean isValidEntry(Object value) {
         return value instanceof String entry && ENTRY_PATTERN.matcher(entry.trim()).matches();
     }

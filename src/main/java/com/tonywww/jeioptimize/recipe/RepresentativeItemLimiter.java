@@ -19,9 +19,16 @@ public final class RepresentativeItemLimiter {
         if (groupKey == null || itemKey == null || itemKey.isBlank()) {
             return true;
         }
+        return shouldKeep(groupKey, itemKey, itemKey);
+    }
+
+    public boolean shouldKeep(Object groupKey, Object itemKey, String familyItemKey) {
+        if (groupKey == null || itemKey == null || familyItemKey == null || familyItemKey.isBlank()) {
+            return true;
+        }
         consideredCount++;
         return groups.computeIfAbsent(groupKey, ignored -> new GroupSelection())
-            .shouldKeep(itemKey, familyKey(itemKey), limitPerGroup);
+            .shouldKeep(itemKey, familyKey(familyItemKey), limitPerGroup);
     }
 
     public int groupCount() {
@@ -61,10 +68,10 @@ public final class RepresentativeItemLimiter {
     }
 
     private static final class GroupSelection {
-        private final Set<String> items = new LinkedHashSet<>();
+        private final Set<Object> items = new LinkedHashSet<>();
         private final Set<String> families = new LinkedHashSet<>();
 
-        private boolean shouldKeep(String itemKey, String familyKey, int limit) {
+        private boolean shouldKeep(Object itemKey, String familyKey, int limit) {
             if (items.size() >= limit || items.contains(itemKey) || families.contains(familyKey)) {
                 return false;
             }

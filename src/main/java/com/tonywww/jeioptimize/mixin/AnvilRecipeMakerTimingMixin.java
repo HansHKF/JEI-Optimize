@@ -22,10 +22,17 @@ public abstract class AnvilRecipeMakerTimingMixin {
     @Unique
     private static long jeiopt$anvilStartNanos;
 
-    @Inject(method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;)Ljava/util/List;", at = @At("HEAD"))
+    @Inject(method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;"
+        //? if >=26.1 {
+        /*+ "Lnet/minecraft/util/context/ContextMap;"
+        *///?}
+        + ")Ljava/util/List;", at = @At("HEAD"))
     private static void jeiopt$anvilStart(
         IVanillaRecipeFactory vanillaRecipeFactory,
         IIngredientManager ingredientManager,
+        //? if >=26.1 {
+        /*net.minecraft.util.context.ContextMap contextMap,
+        *///?}
         CallbackInfoReturnable<List<Object>> callbackInfo
     ) {
         if (JeiOptFeatureFlags.pluginTiming()) {
@@ -33,10 +40,17 @@ public abstract class AnvilRecipeMakerTimingMixin {
         }
     }
 
-    @Inject(method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;)Ljava/util/List;", at = @At("RETURN"))
+    @Inject(method = "getAnvilRecipes(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;Lmezz/jei/api/runtime/IIngredientManager;"
+        //? if >=26.1 {
+        /*+ "Lnet/minecraft/util/context/ContextMap;"
+        *///?}
+        + ")Ljava/util/List;", at = @At("RETURN"))
     private static void jeiopt$anvilEnd(
         IVanillaRecipeFactory vanillaRecipeFactory,
         IIngredientManager ingredientManager,
+        //? if >=26.1 {
+        /*net.minecraft.util.context.ContextMap contextMap,
+        *///?}
         CallbackInfoReturnable<List<Object>> callbackInfo
     ) {
         if (!JeiOptFeatureFlags.pluginTiming()) {

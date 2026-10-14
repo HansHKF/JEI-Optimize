@@ -1,11 +1,12 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.JeiIngredientUid;
+
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.ingredients.IIngredientHelper;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.world.item.ItemStack;
@@ -48,7 +49,7 @@ public final class IronFurnacesGeneratorCompactor {
             Method ingredientMethod = recipeClass.getMethod("getIngredient");
             Constructor<?> constructor = recipeClass.getConstructor(int.class, ItemStack.class);
             IIngredientHelper<ItemStack> helper = ingredientManager.getIngredientHelper(VanillaTypes.ITEM_STACK);
-            Map<Integer, Map<String, ItemStack>> inputsByEnergy = new LinkedHashMap<>();
+            Map<Integer, Map<Object, ItemStack>> inputsByEnergy = new LinkedHashMap<>();
             for (Object recipe : recipes) {
                 if (!recipeClass.isInstance(recipe)) {
                     return recipes;
@@ -59,11 +60,11 @@ public final class IronFurnacesGeneratorCompactor {
                     return recipes;
                 }
                 inputsByEnergy.computeIfAbsent(energy, ignored -> new LinkedHashMap<>())
-                    .putIfAbsent(helper.getUniqueId(stack, UidContext.Recipe), stack);
+                    .putIfAbsent(JeiIngredientUid.recipe(helper, stack), stack);
             }
 
             List<Object> compacted = new ArrayList<>(inputsByEnergy.size());
-            for (Map.Entry<Integer, Map<String, ItemStack>> entry : inputsByEnergy.entrySet()) {
+            for (Map.Entry<Integer, Map<Object, ItemStack>> entry : inputsByEnergy.entrySet()) {
                 List<ItemStack> inputs = List.copyOf(entry.getValue().values());
                 Object recipe = constructor.newInstance(entry.getKey(), inputs.get(0));
                 INPUTS.put(recipe, inputs);

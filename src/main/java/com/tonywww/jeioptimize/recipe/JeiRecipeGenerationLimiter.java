@@ -85,13 +85,17 @@ public final class JeiRecipeGenerationLimiter {
             return true;
         }
 
-        String itemKey;
+        Object itemKey;
         try {
-            itemKey = context.ingredientHelper().getWildcardId(stack);
+            itemKey = JeiIngredientUid.grouping(context.ingredientHelper(), stack);
         } catch (RuntimeException ignored) {
-            itemKey = stack.getDescriptionId();
+            itemKey = ItemStackRepresentativeSelector.itemKey(stack);
         }
-        return context.limiter().shouldKeep(enchantmentGroup, itemKey);
+        //? if >=26.1 {
+        /*return context.limiter().shouldKeep(enchantmentGroup, itemKey, ItemStackRepresentativeSelector.itemKey(stack));
+        *///?} else {
+        return context.limiter().shouldKeep(enchantmentGroup, (String) itemKey);
+        //?}
     }
 
     private static boolean hasContext(ThreadLocal<Deque<Context>> contextHolder) {
