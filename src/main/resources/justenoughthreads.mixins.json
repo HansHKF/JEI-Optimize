@@ -85,6 +85,7 @@
     "JeiGuiBackgroundRenderGuardLegacyMixin",
     "JeiGuiBackgroundRenderGuardModernMixin",
     "JeiGuiRenderGuardMixin",
+    "JeiGuiRenderGuardModernMixin",
     "JeiLoadingOverlayMixin",
     "RecipeManagerInternalPrepMixin",
     "JeiRecipesGuiGuardMixin",
