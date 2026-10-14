@@ -182,7 +182,8 @@ val tooltipTests = listOf(
     "index.TooltipBackendTest",
     "runtime.TooltipCaptureContextTest",
     "index.TooltipSearchIndexTest",
-    "TooltipAbiTest"
+    "TooltipAbiTest",
+    "TooltipGuiRenderGuardTest"
 ).map { testClass ->
     tasks.register<JavaExec>("run" + testClass.substringAfterLast('.')) {
         dependsOn(compileTooltipTests)
