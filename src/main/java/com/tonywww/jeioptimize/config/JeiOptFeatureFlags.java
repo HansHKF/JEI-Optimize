@@ -38,6 +38,13 @@ public final class JeiOptFeatureFlags {
         return enabled() && JeiOptConfig.DIAGNOSTICS_STALL_WATCHDOG.get();
     }
 
+    public static boolean phaseTransitions() {
+        JeiOptConfigSnapshot.Snapshot snapshot = JeiOptConfigSnapshot.current();
+        return enabled() && (snapshot != null
+            ? snapshot.phaseTransitions()
+            : configReady() && JeiOptConfig.DIAGNOSTICS_PHASE_TRANSITIONS.get());
+    }
+
     public static boolean tooltipSearchIndex() {
         JeiOptConfigSnapshot.Snapshot snapshot = JeiOptConfigSnapshot.current();
         return enabled() && (snapshot != null ? snapshot.tooltipSearchIndex()

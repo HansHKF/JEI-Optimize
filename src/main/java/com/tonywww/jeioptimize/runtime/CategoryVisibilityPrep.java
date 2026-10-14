@@ -58,6 +58,7 @@ public final class CategoryVisibilityPrep {
         long generation = JeiOptRuntimeState.currentGeneration();
         AtomicBoolean failed = new AtomicBoolean();
         AtomicBoolean finished = new AtomicBoolean();
+        long waitStarted = System.nanoTime();
         JeiOptClientTickQueue.enqueue(() -> {
             boolean done = slice(manager, generation, failed);
             if (done) {
@@ -72,6 +73,10 @@ public final class CategoryVisibilityPrep {
             }
             JeiOptClientTickQueue.awaitNextClientTick();
         }
+        com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.recordSite(
+            "categoryPrepWait",
+            System.nanoTime() - waitStarted
+        );
     }
 
     private static boolean slice(CategoryVisibilityHost.Worker manager, long generation, AtomicBoolean failed) {
@@ -80,7 +85,16 @@ public final class CategoryVisibilityPrep {
         }
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(JeiOptFeatureFlags.ingredientFilterBudgetMs());
         try {
-            return manager.sliceVisibleCategories(deadline);
+            long sliceStarted = System.nanoTime();
+            boolean done = manager.sliceVisibleCategories(deadline);
+            long sliceNanos = System.nanoTime() - sliceStarted;
+            if (sliceNanos >= TimeUnit.MILLISECONDS.toNanos(50)) {
+                com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.recordSite(
+                    "categoryPrepSlice",
+                    sliceNanos
+                );
+            }
+            return done;
         } catch (RuntimeException | LinkageError failure) {
             failed.set(true);
             JeiOptimize.LOGGER.warn("JEI category prep failed; RecipesGui keeps JEI's own lookup", failure);

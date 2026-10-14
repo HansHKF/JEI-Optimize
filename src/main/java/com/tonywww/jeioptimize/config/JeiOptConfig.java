@@ -74,6 +74,7 @@ public final class JeiOptConfig {
     static final BooleanValue DIAGNOSTICS_STALL_WATCHDOG;
     static final IntValue DIAGNOSTICS_STALL_THRESHOLD_SECONDS;
     static final BooleanValue DIAGNOSTICS_TOOLTIP_SEARCH_METRICS;
+    static final BooleanValue DIAGNOSTICS_PHASE_TRANSITIONS;
 
     static final BooleanValue SYNC_CACHE_SCOPE;
     static final BooleanValue SYNC_BATCH_INGREDIENT_FILTER_INIT;
@@ -285,6 +286,14 @@ public final class JeiOptConfig {
                 "How long one JEI startup phase may run before the stall watchdog starts sampling it.",
                 "0 samples every phase, which is noisy but useful when reproducing a report.")
             .defineInRange("stallThresholdSeconds", 10, 0, 300);
+        DIAGNOSTICS_PHASE_TRANSITIONS = builder
+            .comment(
+                "Record JEI Preparing → Indexing and Indexing → operational milestones, plus",
+                "render-frame gaps separately from Minecraft.tick duration.",
+                "Disabled by default. Does not change JEI behavior. Logs one summary per startup",
+                "and individual operations over 100 ms. Enable with pluginTiming and stallWatchdog",
+                "when investigating remaining startup stalls.")
+            .define("phaseTransitions", false);
         builder.pop();
 
         builder.push("syncOptimizations");

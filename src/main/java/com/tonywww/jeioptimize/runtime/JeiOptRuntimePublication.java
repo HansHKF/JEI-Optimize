@@ -26,13 +26,27 @@ public final class JeiOptRuntimePublication {
         PENDING_CALLBACKS.remove();
         JeiOptExecutors.runOnMainThreadAndWait(() -> {
             if (pending != null) {
-                int refreshed = JeiOptUiRefreshBatch.runAndPublish(pending.callbacks(), publication,
-                    () -> JeiOptRuntimeState.isCurrent(pending.generation()));
-                JeiOptExecutors.checkJeiStartGeneration(pending.generation());
+                long generation = pending.generation();
+                com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.onCallbacksStarted(generation);
+                long callbacksStarted = System.nanoTime();
+                int refreshed = JeiOptUiRefreshBatch.runAndPublish(pending.callbacks(), () -> {
+                    com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.onCallbacksCompleted(
+                        generation,
+                        System.nanoTime() - callbacksStarted
+                    );
+                    com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.measure(
+                        "internalSetRuntime",
+                        publication
+                    );
+                }, () -> JeiOptRuntimeState.isCurrent(generation));
+                JeiOptExecutors.checkJeiStartGeneration(generation);
                 com.tonywww.jeioptimize.JeiOptimize.LOGGER.info(
-                    "JEI startup layout notifications coalesced: generation={}, refreshedGrids={}", pending.generation(), refreshed);
+                    "JEI startup layout notifications coalesced: generation={}, refreshedGrids={}", generation, refreshed);
             } else {
-                publication.run();
+                com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.measure(
+                    "internalSetRuntime",
+                    publication
+                );
             }
             JeiOptFilterBootstrap.runtimePublished();
         });

@@ -108,6 +108,9 @@ public final class AsyncIngredientFilterBuilder {
                 }
                 if (nextIndex.get() != indexBeforeSlice) {
                     recordSlice(sliceCount, longestSliceNanos, sliceStarted);
+                    com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.recordFilterSlice(
+                        System.nanoTime() - sliceStarted
+                    );
                 }
 
                 if (nextIndex.get() < elements.size()) {

@@ -25,7 +25,9 @@ public final class JeiOptDiagnostics {
     }
 
     private static void runWithTiming(String title, IModPlugin plugin, Runnable call) {
-        if (!JeiOptFeatureFlags.pluginTiming()) {
+        boolean pluginTiming = JeiOptFeatureFlags.pluginTiming();
+        boolean phaseTransitions = JeiOptPhaseTransitions.enabled();
+        if (!pluginTiming && !phaseTransitions) {
             call.run();
             return;
         }
@@ -36,8 +38,11 @@ public final class JeiOptDiagnostics {
             call.run();
         } finally {
             long elapsedNanos = System.nanoTime() - startTime;
-            if (elapsedNanos >= LOG_THRESHOLD_NANOS) {
+            if (pluginTiming && elapsedNanos >= LOG_THRESHOLD_NANOS) {
                 JeiOptimize.LOGGER.info("JEI plugin phase '{}' for {} took {}", title, pluginUid, formatDuration(elapsedNanos));
+            }
+            if (phaseTransitions) {
+                JeiOptPhaseTransitions.recordPlugin(title, String.valueOf(pluginUid), elapsedNanos);
             }
         }
     }

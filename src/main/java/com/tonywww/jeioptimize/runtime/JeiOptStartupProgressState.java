@@ -1,5 +1,7 @@
 package com.tonywww.jeioptimize.runtime;
 
+import com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -35,9 +37,11 @@ public final class JeiOptStartupProgressState {
         if (!previous.isDone()) {
             previous.cancel(false);
         }
+        JeiOptPhaseTransitions.onBegin(newGeneration);
     }
 
     public static boolean registerBuild(long expectedGeneration, int chunks, int ingredients) {
+        boolean registered;
         synchronized (LOCK) {
             if (generation != expectedGeneration || stage == Stage.CANCELLED || stage == Stage.HIDDEN) {
                 return false;
@@ -47,8 +51,10 @@ public final class JeiOptStartupProgressState {
             totalChunks = Math.max(0, chunks);
             totalIngredients = Math.max(0, ingredients);
             stage = totalChunks == 0 ? Stage.READY : Stage.INDEXING;
-            return true;
+            registered = true;
         }
+        JeiOptPhaseTransitions.onIndexingStarted(expectedGeneration, chunks, ingredients);
+        return registered;
     }
 
     public static void markChunkCompleted(long expectedGeneration) {
@@ -61,6 +67,7 @@ public final class JeiOptStartupProgressState {
     }
 
     public static void markReady(long expectedGeneration) {
+        boolean completed;
         synchronized (LOCK) {
             if (generation != expectedGeneration || !buildRegistered
                 || (stage != Stage.INDEXING && stage != Stage.READY)) {
@@ -68,6 +75,10 @@ public final class JeiOptStartupProgressState {
             }
             completedChunks = totalChunks;
             stage = Stage.READY;
+            completed = true;
+        }
+        if (completed) {
+            JeiOptPhaseTransitions.onIndexingCompleted(expectedGeneration);
         }
     }
 
@@ -107,6 +118,7 @@ public final class JeiOptStartupProgressState {
             toComplete = publication;
         }
         toComplete.complete(null);
+        JeiOptPhaseTransitions.onFilterIndexPublished(expectedGeneration);
     }
 
     public static void markRuntimeComplete(long expectedGeneration) {
@@ -126,6 +138,7 @@ public final class JeiOptStartupProgressState {
         if (toComplete != null) {
             toComplete.complete(null);
         }
+        JeiOptPhaseTransitions.onRuntimeComplete(expectedGeneration);
     }
 
     public static void fail(long expectedGeneration, Throwable error) {
@@ -138,6 +151,7 @@ public final class JeiOptStartupProgressState {
             toFail = publication;
         }
         toFail.completeExceptionally(error);
+        JeiOptPhaseTransitions.onFail(expectedGeneration, error);
     }
 
     public static void cancel(long expectedGeneration) {
@@ -157,6 +171,7 @@ public final class JeiOptStartupProgressState {
         if (!toCancel.isDone()) {
             toCancel.cancel(false);
         }
+        JeiOptPhaseTransitions.onCancel(expectedGeneration);
     }
 
     public static Snapshot snapshot() {

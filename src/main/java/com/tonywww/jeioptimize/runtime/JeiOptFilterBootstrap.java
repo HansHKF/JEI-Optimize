@@ -50,6 +50,7 @@ public final class JeiOptFilterBootstrap {
             JeiOptimize.LOGGER.info(
                 "JEI startup runtime timing: generation={}, runtimePublishedAtEpochMs={}, startupToRuntimePublishedMs={}, sidebarInteractive=notMeasured",
                 timing.generation, System.currentTimeMillis(), (System.nanoTime() - timing.started) / 1_000_000L);
+            com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.onPublished(timing.generation);
         }
     }
 
@@ -81,7 +82,7 @@ public final class JeiOptFilterBootstrap {
     public static void runGuiRegistration(Runnable callback) {
         GUI_REGISTRATION.set(true);
         try {
-            callback.run();
+            com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.measure("guiRegistration", callback);
         } finally {
             GUI_REGISTRATION.remove();
         }

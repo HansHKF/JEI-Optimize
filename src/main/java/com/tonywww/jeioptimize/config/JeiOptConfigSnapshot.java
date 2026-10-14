@@ -31,7 +31,8 @@ public final class JeiOptConfigSnapshot {
             JeiOptConfig.ASYNC_STARTUP.get(),
             JeiMainThreadPluginPolicy.normalizeEntries(JeiOptConfig.ASYNC_MAIN_THREAD_PLUGINS.get()),
             JeiOptConfig.ASYNC_INGREDIENT_FILTER_BUDGET_MS.get(),
-            JeiOptConfig.ASYNC_INGREDIENT_FILTER_CHUNK_SIZE.get()
+            JeiOptConfig.ASYNC_INGREDIENT_FILTER_CHUNK_SIZE.get(),
+            JeiOptConfig.DIAGNOSTICS_PHASE_TRANSITIONS.get()
         );
     }
 
@@ -61,7 +62,8 @@ public final class JeiOptConfigSnapshot {
         boolean asyncStartup,
         Set<String> mainThreadPluginIds,
         int ingredientFilterBudgetMs,
-        int ingredientFilterChunkSize
+        int ingredientFilterChunkSize,
+        boolean phaseTransitions
     ) {
     }
 }

@@ -25,10 +25,14 @@ public abstract class ClientTickHookMixin {
         JeiOptClientTickQueue.drainForCurrentTick();
         JeiOptFilterBootstrap.clientTickFinished(jeiOptimize$tickStarted);
         JeiOptBenchmark.tick(jeiOptimize$tickStarted);
+        com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.noteClientTick(
+            System.nanoTime() - jeiOptimize$tickStarted
+        );
     }
 
     @Inject(method = "runTick", at = @At("HEAD"))
     private void jeiOptimize$measureFrame(boolean renderLevel, CallbackInfo callbackInfo) {
         JeiOptBenchmark.frame();
+        com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.noteRenderFrame();
     }
 }

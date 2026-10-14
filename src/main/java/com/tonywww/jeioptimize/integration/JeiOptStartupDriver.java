@@ -92,6 +92,7 @@ public final class JeiOptStartupDriver {
         UltimateCarWorkshopCompactor.clear();
         JeiOptFilterBootstrap.clear();
         JeiOptClientTickQueue.clear();
+        com.tonywww.jeioptimize.instrumentation.JeiOptPhaseTransitions.reset();
         com.tonywww.jeioptimize.runtime.CategoryVisibilityHost.clear();
         JeiOptExecutors.shutdownWorkerExecutor();
     }
