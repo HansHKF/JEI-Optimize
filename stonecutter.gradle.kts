@@ -9,6 +9,15 @@ stonecutter parameters {
     constants {
         match(loader, "forge", "neoforge")
     }
+    replacements {
+        string(eval(current.version, ">=26.1")) {
+            replace("ResourceLocation", "Identifier")
+            replace("GuiGraphics", "GuiGraphicsExtractor")
+            replace("RecipeIngredientRole.CATALYST", "RecipeIngredientRole.CRAFTING_STATION")
+            replace("mezz.jei.api.recipe.RecipeType", "mezz.jei.api.recipe.types.IRecipeType")
+            replace("mezz/jei/api/recipe/RecipeType", "mezz/jei/api/recipe/types/IRecipeType")
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------

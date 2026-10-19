@@ -33,7 +33,11 @@ public abstract class JeiLoadingOverlayMixin {
     @Shadow
     protected int topPos;
 
+    //? if >=26.1 {
+    /*@Inject(method = "extractRenderState", at = @At("TAIL"), require = 1)
+    *///?} else {
     @Inject(method = "render", at = @At("TAIL"))
+    //?}
     private void jeiOptimize$renderLoadingMessage(
         GuiGraphics guiGraphics,
         int mouseX,
@@ -82,7 +86,11 @@ public abstract class JeiLoadingOverlayMixin {
             panelY + panelHeight,
             0xB0101010
         );
+        //? if >=26.1 {
+        /*guiGraphics.text(
+        *///?} else {
         guiGraphics.drawString(
+        //?}
             font,
             statusText,
             panelX + (panelWidth - statusWidth) / 2,

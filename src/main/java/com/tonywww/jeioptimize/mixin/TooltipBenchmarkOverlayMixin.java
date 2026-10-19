@@ -10,7 +10,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Pseudo
 @Mixin(targets = "mezz.jei.gui.overlay.IngredientListOverlay", remap = false)
 public abstract class TooltipBenchmarkOverlayMixin {
+    //? if >=26.1 {
+    /*@Inject(method = "drawForeground(Lnet/minecraft/client/Minecraft;Lnet/minecraft/client/gui/GuiGraphics;IIF)V", at = @At("RETURN"), require = 1)
+    *///?} else {
     @Inject(method = "drawScreen(Lnet/minecraft/client/Minecraft;Lnet/minecraft/client/gui/GuiGraphics;IIF)V", at = @At("RETURN"))
+    //?}
     private void jeiopt$recordSidebar(CallbackInfo callback) {
         JeiOptBenchmark.sidebarDrawn();
     }

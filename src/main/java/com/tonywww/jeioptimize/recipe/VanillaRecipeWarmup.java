@@ -88,9 +88,9 @@ public final class VanillaRecipeWarmup {
     private static void resolve(List<Recipe<?>> recipes) {
         for (Recipe<?> recipe : recipes) {
             try {
-                for (Ingredient ingredient : recipe.getIngredients()) {
+                for (Ingredient ingredient : RecipeIngredientAccess.ingredients(recipe)) {
                     if (ingredient != null) {
-                        ingredient.getItems();
+                        RecipeIngredientAccess.items(ingredient);
                     }
                 }
             } catch (RuntimeException | LinkageError e) {

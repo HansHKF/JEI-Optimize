@@ -4,7 +4,7 @@ import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import com.tonywww.jeioptimize.recipe.JeiRecipeGenerationLimiter;
 import mezz.jei.api.runtime.IIngredientManager;
 import mezz.jei.common.platform.IPlatformRecipeHelper;
-//? if forge {
+//? if forge || >=26.1 {
 import net.minecraft.world.inventory.GrindstoneMenu;
 //?}
 import org.spongepowered.asm.mixin.Mixin;
@@ -39,7 +39,7 @@ public abstract class GrindstoneRepresentativeMixin {
         }
     }
 
-    //? if forge {
+    //? if forge || >=26.1 {
     @Inject(
         method = "getRepairRecipes(Lmezz/jei/common/platform/IPlatformRecipeHelper;Lmezz/jei/api/runtime/IIngredientManager;Lnet/minecraft/world/inventory/GrindstoneMenu;)Ljava/util/stream/Stream;",
         at = @At("RETURN"),

@@ -1,10 +1,13 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.JeiIngredientUid;
+
+import com.tonywww.jeioptimize.recipe.RecipeIngredientAccess;
+
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.ingredients.IIngredientHelper;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -15,7 +18,6 @@ import net.minecraft.world.item.crafting.Recipe;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,9 +72,9 @@ public final class GeneratorGaloreRecipeCompactor {
                     if (!(fuel instanceof Ingredient ingredient)) {
                         return recipes;
                     }
-                    for (ItemStack stack : ingredient.getItems()) {
+                    for (ItemStack stack : RecipeIngredientAccess.items(ingredient)) {
                         if (!stack.isEmpty()) {
-                            group.fuels().putIfAbsent(helper.getUniqueId(stack, UidContext.Recipe), stack);
+                            group.fuels().putIfAbsent(JeiIngredientUid.recipe(helper, stack), stack);
                         }
                     }
                 }
@@ -83,7 +85,7 @@ public final class GeneratorGaloreRecipeCompactor {
                 if (group.fuels().isEmpty()) {
                     return recipes;
                 }
-                Ingredient mergedFuel = Ingredient.of(group.fuels().values().stream());
+                Ingredient mergedFuel = RecipeIngredientAccess.ofStacks(group.fuels().values().stream());
                 Object compactedRecipe;
                 if (constructor.getParameterCount() == 5) {
                     compactedRecipe = constructor.newInstance(
@@ -123,16 +125,14 @@ public final class GeneratorGaloreRecipeCompactor {
         }
     }
 
-    private static String ingredientKey(Object ingredient, IIngredientHelper<ItemStack> helper) {
+    private static Object ingredientKey(Object ingredient, IIngredientHelper<ItemStack> helper) {
         if (ingredient instanceof ItemStack stack) {
-            return helper.getUniqueId(stack, UidContext.Recipe);
+            return JeiIngredientUid.recipe(helper, stack);
         }
         if (ingredient instanceof Ingredient vanillaIngredient) {
-            return java.util.Arrays.stream(vanillaIngredient.getItems())
-                .map(stack -> helper.getUniqueId(stack, UidContext.Recipe))
-                .sorted(Comparator.naturalOrder())
-                .reduce((left, right) -> left + "\u0000" + right)
-                .orElse("");
+            return java.util.Arrays.stream(RecipeIngredientAccess.items(vanillaIngredient))
+                .map(stack -> JeiIngredientUid.recipe(helper, stack))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
         }
         return ingredient.getClass().getName() + ':' + ingredient;
     }
@@ -177,7 +177,7 @@ public final class GeneratorGaloreRecipeCompactor {
         throw new ReflectiveOperationException("Generator Galore fuel recipe has no accessible id");
     }
 
-    private record GroupKey(String generator, long rate, long duration) {
+    private record GroupKey(Object generator, long rate, long duration) {
     }
 
     private record Group(
@@ -185,7 +185,7 @@ public final class GeneratorGaloreRecipeCompactor {
         Object generator,
         Number rate,
         Number duration,
-        Map<String, ItemStack> fuels
+        Map<Object, ItemStack> fuels
     ) {
         private Group(Object firstRecipe, Object generator, Number rate, Number duration) {
             this(firstRecipe, generator, rate, duration, new LinkedHashMap<>());

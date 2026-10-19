@@ -1,5 +1,9 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.JeiIngredientUid;
+
+import com.tonywww.jeioptimize.recipe.RecipeIngredientAccess;
+
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import com.tonywww.jeioptimize.recipe.ItemStackRepresentativeSelector;
@@ -8,7 +12,6 @@ import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.ingredients.IIngredientHelper;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.resources.ResourceLocation;
@@ -78,12 +81,10 @@ public final class EmbersDawnstoneAnvilCompactor {
                 if (inputs.isEmpty() || inputs.size() != outputs.size()) {
                     return recipes;
                 }
-                List<ItemStack> topInputs = Arrays.asList(ingredient.getItems());
-                List<String> topUids = topInputs.stream()
-                    .map(stack -> helper.getUniqueId(stack, UidContext.Recipe))
-                    .distinct()
-                    .sorted()
-                    .toList();
+                List<ItemStack> topInputs = Arrays.asList(RecipeIngredientAccess.items(ingredient));
+                java.util.Set<Object> topUids = topInputs.stream()
+                    .map(stack -> JeiIngredientUid.recipe(helper, stack))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
                 Group group = groups.computeIfAbsent(
                     new GroupKey(id, topUids),
                     ignored -> new Group(recipe, id, ingredient, List.copyOf(topInputs))
@@ -185,7 +186,7 @@ public final class EmbersDawnstoneAnvilCompactor {
         return List.copyOf(stacks);
     }
 
-    private record GroupKey(ResourceLocation id, List<String> topUids) {
+    private record GroupKey(ResourceLocation id, java.util.Set<Object> topUids) {
     }
 
     private record Group(

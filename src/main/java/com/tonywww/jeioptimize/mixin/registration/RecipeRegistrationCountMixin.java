@@ -2,7 +2,6 @@ package com.tonywww.jeioptimize.mixin.registration;
 
 import com.tonywww.jeioptimize.instrumentation.JeiPluginCallContext;
 import mezz.jei.api.ingredients.IIngredientType;
-import mezz.jei.api.recipe.RecipeType;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -16,7 +15,7 @@ import java.util.List;
 @Mixin(targets = "mezz.jei.library.load.registration.RecipeRegistration", remap = false)
 public abstract class RecipeRegistrationCountMixin {
     @Inject(method = "addRecipes", at = @At("HEAD"))
-    private <T> void jeiopt$countRecipes(RecipeType<T> recipeType, List<T> recipes, CallbackInfo callbackInfo) {
+    private <T> void jeiopt$countRecipes(mezz.jei.api.recipe.RecipeType<T> recipeType, List<T> recipes, CallbackInfo callbackInfo) {
         JeiPluginCallContext.record(JeiPluginCallContext.RegistrationMetric.RECIPES, recipes.size());
     }
 

@@ -35,6 +35,12 @@
 .PARAMETER RuntimeModJars
     Local mod jars to remap and add only to this compatibility run. They are never packaged.
 
+.PARAMETER MinecraftVersion
+    Select a target explicitly. NeoForge defaults to 1.21.1; use 26.1.2 for the Java 25 target.
+
+.PARAMETER RequireSidebar
+    On 26.1.2, require the inventory sidebar to render and complete 120 search calls.
+
 .PARAMETER Label
     Optional file-name suffix for keeping separate logs from different mod combinations.
 
@@ -52,7 +58,10 @@ param(
     [string] $JeiVersion = "",
     [ValidateSet("forge", "neoforge")]
     [string] $Loader = "forge",
+    [ValidateSet("", "1.20.1", "1.21.1", "26.1.2")]
+    [string] $MinecraftVersion = "",
     [string] $World = "",
+    [switch] $RequireSidebar,
     [switch] $KeepConfig,
     [string] $RunDirectory = "",
     [switch] $RequireTooltipShadow,
@@ -72,7 +81,14 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
-if ($Loader -eq "forge") {
+if ($MinecraftVersion -eq "26.1.2") {
+    if ($Loader -ne "neoforge") { throw "Minecraft 26.1.2 requires -Loader neoforge" }
+    $GradleProject = ":26.1.2-neoforge"
+    $McVersion = "26.1.2"
+    $ClientLaunchTarget = "clientRun"
+    $RunDir = Join-Path $RepoRoot "versions/26.1.2-neoforge/run"
+    if (-not $World) { $World = "port-test" }
+} elseif ($Loader -eq "forge") {
     $GradleProject = ":1.20.1-forge"
     $McVersion = "1.20.1"
     $ClientLaunchTarget = "forgeclientuserdev"
@@ -87,6 +103,12 @@ if ($Loader -eq "forge") {
     if (-not $World) { $World = "v121" }
 }
 
+if ($MinecraftVersion -and $MinecraftVersion -ne $McVersion) {
+    throw "Selected loader does not support Minecraft $MinecraftVersion"
+}
+if ($RequireSidebar -and $McVersion -ne "26.1.2") {
+    throw "-RequireSidebar currently requires Minecraft 26.1.2"
+}
 if ($RunDirectory) {
     $RunDir = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $RunDirectory))
     if (!$RunDir.StartsWith($RepoRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -99,6 +121,7 @@ $RunLogPath = Join-Path $RunDir "logs\latest.log"
 $RunDebugLogPath = Join-Path $RunDir "logs\debug.log"
 $OutDir = Join-Path $RepoRoot "build\benchmarks\jei-compat"
 $Tag = "$Loader-" + $(if ($JeiVersion) { $JeiVersion } else { "default" })
+if ($McVersion -eq "26.1.2") { $Tag = "$McVersion-$Tag" }
 if ($Label) { $Tag += ".$Label" }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
@@ -129,7 +152,11 @@ function Read-LogShared($Path) {
 
 function Get-JeiRuntimeJarName($Text) {
     $matches = [regex]::Matches($Text, '(?m)Found mod file "?(?<jar>[^"\r\n]*?jei[^"\r\n]*?\.jar)')
-    if ($matches.Count -eq 0) { return "" }
+    if ($matches.Count -eq 0) {
+        $newPath = Get-JeiRuntimeJarPath $Text
+        if ($newPath) { return [IO.Path]::GetFileName($newPath) }
+        return ""
+    }
     return $matches[$matches.Count - 1].Groups['jar'].Value.Trim()
 }
 
@@ -140,6 +167,9 @@ function Get-JeiRuntimeJarPath($Text) {
             $Text,
             '(?m)Found META-INF/neoforge\.mods\.toml mod of type null: (?<path>.+?[\\/]jei-[^\r\n]*?\.jar)\r?$'
         )
+    }
+    if ($matches.Count -eq 0) {
+        $matches = [regex]::Matches($Text, '(?m)^\s*- jei \(jar\((?<path>.+?\.jar)\)\)')
     }
     if ($matches.Count -eq 0) { return "" }
     return $matches[$matches.Count - 1].Groups['path'].Value.Trim()
@@ -173,7 +203,12 @@ try {
     $env:JAVA_HOME = $JavaHome
     $env:Path = "$JavaHome\bin;$oldPath"
 
-    $gradleArgs = "--no-daemon $GradleProject`:runClient --args=`"--quickPlaySingleplayer $World`""
+    if ($McVersion -eq "26.1.2") {
+        $gradleArgs = "--no-daemon $GradleProject`:runClient `"-PcompatTest.world=$World`""
+        if ($RequireSidebar) { $gradleArgs += ' "-PcompatTest.benchmark=true"' }
+    } else {
+        $gradleArgs = "--no-daemon $GradleProject`:runClient --args=`"--quickPlaySingleplayer $World`""
+    }
     if ($RunDirectory) {
         $gradleArgs += " `"-PcompatTest.runDirectory.$McVersion=$RunDir`""
     }
@@ -191,13 +226,23 @@ try {
 
     Write-Host "running $Loader client (JEI $(if ($JeiVersion) { $JeiVersion } else { 'default' }), world '$World'), auto-exit within $TimeoutSeconds s ..."
     $process = Start-Process -FilePath (Join-Path $RepoRoot 'gradlew.bat') `
-        -ArgumentList $gradleArgs -WorkingDirectory $RepoRoot -PassThru `
+        -ArgumentList $gradleArgs -WorkingDirectory $RepoRoot -PassThru -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $OutDir "$Tag.stdout.log") `
         -RedirectStandardError (Join-Path $OutDir "$Tag.stderr.log")
 
     $hardDeadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ([DateTime]::UtcNow -lt $hardDeadline) {
-        if ($process.HasExited) { $status = "process-exited"; break }
+        if ($process.HasExited) {
+            $finalText = Read-LogShared $RunLogPath
+            if ($RequireSidebar -and $finalText -match 'Starting JEI took' -and
+                $finalText -match 'JET benchmark sidebar drawn:' -and $finalText -match 'JET benchmark complete: queries=120' -and
+                (!$RequireTooltipShadow -or $finalText -match 'JEI tooltip shadow passed:') -and
+                (!$RequireTooltipIndex -or ($finalText -match 'JEI tooltip optimized validation passed:' -and
+                    $finalText -match 'JEI tooltip filter published on client thread:'))) {
+                $status = "jei-started"
+            } else { $status = "process-exited" }
+            break
+        }
 
         $text = Read-LogShared $RunLogPath
         if ($text -match '(?m)Found mod file [^\r\n]*jei[^\r\n]*-unshaded\.jar') {
@@ -218,7 +263,8 @@ try {
             break
         }
         if ($text -match "Starting JEI took" -and (!$RequireTooltipShadow -or $text -match 'JEI tooltip shadow passed:') -and
-            (!$RequireTooltipIndex -or ($text -match 'JEI tooltip optimized validation passed:' -and $text -match 'JEI tooltip filter published on client thread:'))) {
+            (!$RequireTooltipIndex -or ($text -match 'JEI tooltip optimized validation passed:' -and $text -match 'JEI tooltip filter published on client thread:')) -and
+            (!$RequireSidebar -or ($text -match 'JET benchmark sidebar drawn:' -and $text -match 'JET benchmark complete: queries=120'))) {
             $status = "jei-started"
             $wait = [DateTime]::UtcNow.AddSeconds($PostJeiWaitSeconds)
             if ($wait -gt $hardDeadline) { $wait = $hardDeadline }

@@ -41,7 +41,7 @@ public final class ItemStackRepresentativeSelector {
 
     public static String itemKey(ItemStack stack) {
         ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return key == null ? stack.getDescriptionId() : key.toString();
+        return key == null ? stack.getItem().toString() : key.toString();
     }
 
     public record ParallelSelection(List<ItemStack> inputs, List<ItemStack> outputs) {

@@ -38,7 +38,11 @@ public abstract class IngredientSorterMixin {
             return 0;
         }
         TagKey<Item> tagKey = TagKey.create(Registries.ITEM, tagId);
+        //? if >=26.1 {
+        /*return BuiltInRegistries.ITEM.get(tagKey)
+        *///?} else {
         return BuiltInRegistries.ITEM.getTag(tagKey)
+        //?}
             .map(HolderSet.ListBacked::size)
             .orElse(0);
     }

@@ -18,6 +18,7 @@ val forgeVersionRange = (findProperty("vers.forge.versionRange") ?: "").toString
 val neoforgeLoaderRange = (findProperty("vers.neoforge.loaderRange") ?: "").toString()
 val neoforgeVersionRange = (findProperty("vers.neoforge.versionRange") ?: "").toString()
 val jeiVersion = property("deps.jei").toString()
+val jeiMinimumVersion = (findProperty("deps.jei.minimum") ?: jeiVersion).toString()
 // Runtime-only override so a build compiled against deps.jei can be smoke-tested against another
 // JEI release: ./gradlew runClient -Pjei.runtime.1.20.1=15.48.0.179
 // Force Maven's default jar for overrides because JEI 15.49-15.56 also publish an unshaded
@@ -69,6 +70,15 @@ loom {
             "Compatibility test run directory must stay inside the workspace"
         }
         runConfigs.all { runDir(target.relativeTo(projectDir).invariantSeparatorsPath) }
+    }
+    if (project.findProperty("compatTest.benchmark") == "true") {
+        runConfigs.all {
+            vmArg("-Djet.benchmark=true")
+            vmArg("-Djet.benchmark.autoExit=true")
+            project.findProperty("compatTest.tooltipPrefix")?.toString()?.let {
+                vmArg("-Djet.benchmark.tooltipPrefix=$it")
+            }
+        }
     }
 }
 
@@ -134,11 +144,12 @@ tasks {
             "description" to modDescription,
             "authors" to modAuthors,
             "minecraftVersion" to mcVersion,
+            "minecraftVersionRange" to "[$mcVersion,1.21.2)",
             "forgeLoaderRange" to forgeLoaderRange,
             "forgeVersionRange" to forgeVersionRange,
             "neoforgeLoaderRange" to neoforgeLoaderRange,
             "neoforgeVersionRange" to neoforgeVersionRange,
-            "jeiVersion" to jeiVersion,
+            "jeiMinimumVersion" to jeiMinimumVersion,
             "mixinCompat" to "JAVA_$javaVersion",
         )
         inputs.properties(props)
@@ -174,12 +185,15 @@ val compileTooltipTests = tasks.register<JavaCompile>("compileTooltipTests") {
     })
 }
 val tooltipTests = listOf(
+    "instrumentation.TooltipMemoryDiagnosticsTest",
+    "config.TooltipPluginThreadPolicyTest",
     "integration.TooltipMineColoniesAttributesTest",
     "index.TooltipDeferredStorageTest",
     "runtime.TooltipUiRefreshBatchTest",
     "index.TooltipPipelineTest",
     "runtime.TooltipBuildGateTest",
     "index.TooltipBackendTest",
+    "index.TooltipUidCompatibilityTest",
     "runtime.TooltipCaptureContextTest",
     "index.TooltipSearchIndexTest",
     "TooltipAbiTest",

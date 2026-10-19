@@ -115,6 +115,11 @@ public final class JeiOptExecutors {
         return CURRENT_JEI_START.get() != null;
     }
 
+    public static long currentJeiStartGeneration() {
+        JeiStartTask task = CURRENT_JEI_START.get();
+        return task != null ? task.generation : JeiOptRuntimeState.currentGeneration();
+    }
+
     public static void checkJeiStartActive() {
         JeiStartTask task = CURRENT_JEI_START.get();
         if (task != null) {

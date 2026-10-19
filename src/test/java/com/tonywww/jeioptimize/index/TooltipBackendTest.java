@@ -8,7 +8,9 @@ import java.util.Random;
 
 public final class TooltipBackendTest {
     public static void main(String[] arguments) throws Exception {
-        TooltipSearchBackend backend = new TooltipSearchBackend(false);
+        boolean modern = TooltipBackendTest.class.getClassLoader()
+            .getResource("mezz/jei/core/search/suffixtree/GeneralizedSuffixTree.class") == null;
+        TooltipSearchBackend backend = new TooltipSearchBackend(modern);
         List<TooltipSearchSnapshot> snapshots = new ArrayList<>();
         Random random = new Random(8192);
         for (int ordinal = 0; ordinal < 320; ordinal++) {
