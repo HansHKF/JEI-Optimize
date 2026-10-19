@@ -115,11 +115,15 @@ public final class TooltipAbiTest {
                 try (InputStream source = archive.getInputStream(archive.getEntry("mezz/jei/gui/ingredients/IngredientFilter.class"))) {
                     ClassNode filter = new ClassNode();
                     new ClassReader(source).accept(filter, 0);
-                    boolean supported = JeiOptMixinPlugin.hasModernIngredientFilterConstructorContract(filter);
-                    if (argument.contains("19.56.") || argument.contains("19.57.")) {
-                        check(!supported, "changed ingredient filter constructor retains native construction " + argument);
+                    String branch = JeiOptMixinPlugin.modernIngredientFilterConstructorBranch(filter);
+                    boolean supported = branch != null;
+                    if (argument.contains("19.57.0.446") || argument.contains("19.57.0.450")
+                        || argument.contains("15.62.0.219")) {
+                        check("sorting-config".equals(branch),
+                            "verified sorting-config constructor enables budgeted indexing " + argument);
                     }
-                    System.out.println("Ingredient filter constructor ABI: " + Path.of(argument).getFileName() + " supported=" + supported);
+                    System.out.println("Ingredient filter constructor ABI: " + Path.of(argument).getFileName()
+                        + " supported=" + supported + " branch=" + branch);
                 }
                 if (argument.contains("15.59.") || argument.contains("19.56.")) {
                     try (InputStream source = archive.getInputStream(archive.getEntry("mezz/jei/gui/events/GuiEventHandler.class"))) {
