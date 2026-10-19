@@ -2,6 +2,7 @@ package com.tonywww.jeioptimize.mixin;
 
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
+import com.tonywww.jeioptimize.config.JeiMainThreadPluginPolicy;
 import com.tonywww.jeioptimize.instrumentation.JeiOptDiagnostics;
 import com.tonywww.jeioptimize.instrumentation.JeiPluginCallContext;
 import com.tonywww.jeioptimize.integration.SfmFallingAnvilCache;
@@ -22,10 +23,8 @@ import java.util.function.Consumer;
 @Mixin(targets = "mezz.jei.library.load.PluginCaller", remap = false)
 public abstract class PluginCallerMixin {
     private static final String ALI_PLUGIN_CLASS = "com.yanny.ali.jei.compatibility.JeiCompatibility";
-    private static final String JEI_VANILLA_PLUGIN = "jei:minecraft";
     private static final String JEI_FORGE_GUI_PLUGIN = "jei:forge_gui";
     private static final String JEI_NEOFORGE_GUI_PLUGIN = "jei:neoforge_gui";
-    private static final String REGISTERING_INGREDIENTS = "Registering ingredients";
     private static final String REGISTERING_RUNTIME = "Registering Runtime";
     private static final String REGISTERING_RECIPES = "Registering recipes";
 
@@ -52,13 +51,13 @@ public abstract class PluginCallerMixin {
         JeiOptExecutors.checkJeiStartActive();
         boolean isAliPlugin = ALI_PLUGIN_CLASS.equals(modPlugin.getClass().getName());
         String pluginUid = jeiOptimize$safePluginUid(modPlugin);
+        //? if >=26.1 {
+        /*boolean fontBakingRequiresMainThread = true;
+        *///?} else {
+        boolean fontBakingRequiresMainThread = false;
+        //?}
         boolean requiresMainThread = isAliPlugin
-            || pluginUid == null
-            || "blue_skies:jei_plugin".equals(pluginUid)
-            || "delightful:jei_plugin".equals(pluginUid)
-            || JEI_VANILLA_PLUGIN.equals(pluginUid) && REGISTERING_INGREDIENTS.equals(title)
-            || (JEI_FORGE_GUI_PLUGIN.equals(pluginUid) || JEI_NEOFORGE_GUI_PLUGIN.equals(pluginUid))
-                && REGISTERING_RUNTIME.equals(title)
+            || JeiMainThreadPluginPolicy.requiresMainThread(pluginUid, title, fontBakingRequiresMainThread)
             || JeiOptFeatureFlags.pluginRequiresMainThread(pluginUid);
         Runnable pluginCall = () -> {
             try {

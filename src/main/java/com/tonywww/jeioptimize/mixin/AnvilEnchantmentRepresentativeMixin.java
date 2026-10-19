@@ -12,12 +12,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "mezz.jei.library.plugins.vanilla.anvil.AnvilRecipeMaker$EnchantmentData", remap = false)
 public abstract class AnvilEnchantmentRepresentativeMixin {
     @Inject(
+        //? if >=26.1 {
+        /*method = "canEnchant(Lmezz/jei/common/platform/IPlatformItemStackHelper;Lnet/minecraft/world/item/ItemStack;)Z",
+        *///?} else {
         method = "canEnchant(Lnet/minecraft/world/item/ItemStack;)Z",
+        //?}
         at = @At("RETURN"),
         cancellable = true,
         require = 1
     )
     private void jeiOptimize$limitCompatibleItems(
+        //? if >=26.1 {
+        /*mezz.jei.common.platform.IPlatformItemStackHelper platformHelper,
+        *///?}
         ItemStack ingredient,
         CallbackInfoReturnable<Boolean> callbackInfo
     ) {

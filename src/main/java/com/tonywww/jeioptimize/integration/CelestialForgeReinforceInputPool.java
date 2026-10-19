@@ -1,5 +1,7 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.RecipeIngredientAccess;
+
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.recipe.ItemStackRepresentativeSelector;
 import com.tonywww.jeioptimize.recipe.RepresentativeItemLimiter;
@@ -126,7 +128,7 @@ public final class CelestialForgeReinforceInputPool {
         }
 
         List<ItemStack> selected = chooseMatches(aggressive, limit, fullMatches, representatives);
-        return selected.isEmpty() ? null : Ingredient.of(selected.stream());
+        return selected.isEmpty() ? null : RecipeIngredientAccess.ofStacks(selected.stream());
     }
 
     static <T> List<T> chooseMatches(
@@ -154,11 +156,14 @@ public final class CelestialForgeReinforceInputPool {
         if (ingredient == null) {
             return null;
         }
-        ItemStack[] items = ingredient.getItems();
+        if (!RecipeIngredientAccess.canFlatten(ingredient)) {
+            return ingredient;
+        }
+        ItemStack[] items = RecipeIngredientAccess.items(ingredient);
         if (items.length == 0) {
             return null;
         }
-        return Ingredient.of(java.util.Arrays.stream(items).map(ItemStack::copy));
+        return RecipeIngredientAccess.ofStacks(java.util.Arrays.stream(items).map(ItemStack::copy));
     }
 
     private static void logFailureOnce(Throwable error) {

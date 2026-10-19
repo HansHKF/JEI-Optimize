@@ -1,11 +1,11 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Build both loader jars (Forge 1.20.1 + NeoForge 1.21.1) and show where they landed.
+    Build all target jars (Forge 1.20.1 + NeoForge 1.21.1/26.1.2) and show where they landed.
 
 .DESCRIPTION
-    Runs `gradlew build`, which compiles and jars every Stonecutter node (both loaders) in one go,
-    then lists the produced remapped jars. Use scripts/publish.ps1 to release them to CurseForge.
+    Runs `gradlew build`, which compiles and jars every Stonecutter node in one go,
+    then lists the produced release jars. Use scripts/publish.ps1 to release them to CurseForge.
 
 .PARAMETER JavaHome
     Optional path to a JDK 21 for the Gradle daemon (Stonecutter needs 21+). Omit to use
@@ -32,7 +32,7 @@ if ($JavaHome) {
     $env:JAVA_HOME = $JavaHome
 }
 
-Write-Host "== Building all loaders (Forge 1.20.1 + NeoForge 1.21.1) ==" -ForegroundColor Cyan
+Write-Host "== Building all Minecraft targets ==" -ForegroundColor Cyan
 
 # Pass args as an array so PowerShell hands each flag to Gradle as a single token.
 & .\gradlew.bat @('build', '--console=plain')

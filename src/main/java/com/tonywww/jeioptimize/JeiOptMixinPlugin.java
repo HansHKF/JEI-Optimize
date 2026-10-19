@@ -136,12 +136,20 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
         "anvil representative recipes",
         "getAnvilRecipes",
         "(Lmezz/jei/api/recipe/vanilla/IVanillaRecipeFactory;"
-            + "Lmezz/jei/api/runtime/IIngredientManager;)Ljava/util/List;"
+            + "Lmezz/jei/api/runtime/IIngredientManager;"
+            //? if >=26.1 {
+            /*+ "Lnet/minecraft/util/context/ContextMap;"
+            *///?}
+            + ")Ljava/util/List;"
     );
     private static final Requirement ANVIL_REPRESENTATIVE_CAN_ENCHANT = Requirement.method(
         "anvil representative recipes",
         "canEnchant",
+        //? if >=26.1 {
+        /*"(Lmezz/jei/common/platform/IPlatformItemStackHelper;Lnet/minecraft/world/item/ItemStack;)Z"
+        *///?} else {
         "(Lnet/minecraft/world/item/ItemStack;)Z"
+        //?}
     );
     private static final InvocationRequirement RECIPE_DEBUG_INVOCATION = new InvocationRequirement(
         "addRecipe",
@@ -354,7 +362,11 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
         "canEnchant",
         "(Lmezz/jei/common/platform/IPlatformRecipeHelper;"
             + "Lnet/minecraft/world/item/ItemStack;"
+            //? if >=26.1 {
+            /*+ "Lnet/minecraft/core/Holder;"
+            *///?} else {
             + "Lnet/minecraft/world/item/enchantment/Enchantment;"
+            //?}
             + "Lnet/minecraft/resources/ResourceLocation;)Z"
     );
     private static final InvocationRequirement GRINDSTONE_MODERN_INVOCATION = new InvocationRequirement(
@@ -365,7 +377,11 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
         "canEnchant",
         "(Lmezz/jei/common/platform/IPlatformRecipeHelper;"
             + "Lnet/minecraft/world/item/ItemStack;"
+            //? if >=26.1 {
+            /*+ "Lnet/minecraft/core/Holder;"
+            *///?} else {
             + "Lnet/minecraft/world/item/enchantment/Enchantment;"
+            //?}
             + "Lnet/minecraft/resources/ResourceLocation;)Z"
     );
     private static final List<InvocationRequirement> GRINDSTONE_LEGACY_INVOCATIONS = List.of(
@@ -419,7 +435,11 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
         Map.entry(MIXIN_PACKAGE + "FuelRecipeMakerMixin", Requirement.method(
             "fuel recipe compaction",
             "getFuelRecipes",
+            //? if >=26.1 {
+            /*"(Lmezz/jei/api/runtime/IIngredientManager;Lnet/minecraft/world/item/crafting/RecipeType;)Ljava/util/List;")),
+            *///?} else {
             "(Lmezz/jei/api/runtime/IIngredientManager;)Ljava/util/List;")),
+            //?}
         Map.entry(BREWING_INDEX_FORGE_MIXIN, Requirement.method(
             "indexed brewing lookup",
             "getNewPotions",
@@ -1128,7 +1148,13 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
         if ((MIXIN_PACKAGE + "TooltipBenchmarkOverlayMixin").equals(mixinClassName)) {
             ClassNode overlay = readTarget(targetClassName);
             return Boolean.getBoolean("jet.benchmark") && overlay != null
-                && Requirement.method("", "drawScreen", "(Lnet/minecraft/client/Minecraft;Lnet/minecraft/client/gui/GuiGraphics;IIF)V").isPresentIn(overlay);
+                && Requirement.method("",
+                    //? if >=26.1 {
+                    /*"drawForeground",
+                    *///?} else {
+                    "drawScreen",
+                    //?}
+                    "(Lnet/minecraft/client/Minecraft;Lnet/minecraft/client/gui/GuiGraphics;IIF)V").isPresentIn(overlay);
         }
         if (!readEarlyBoolean("enabled", true)) {
             return false;
@@ -1137,11 +1163,21 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
             return hasRuntimeAccessContract(readTarget(targetClassName));
         }
         if ((mixinClassName.equals(MIXIN_PACKAGE + "JeiGuiRenderGuardMixin")
+            || mixinClassName.equals(MIXIN_PACKAGE + "JeiGuiRenderGuard26Mixin")
             || mixinClassName.equals(MIXIN_PACKAGE + "JeiGuiBackgroundRenderGuardLegacyMixin")
             || mixinClassName.equals(MIXIN_PACKAGE + "JeiGuiBackgroundRenderGuardModernMixin"))
             && !hasRuntimeAccessContract(readTarget("mezz.jei.common.Internal"))) {
             LOGGER.warn("JEI startup render guard disabled: nullable runtime field ABI is unavailable");
             return false;
+        }
+        if (mixinClassName.equals(MIXIN_PACKAGE + "JeiGuiRenderGuard26Mixin")) {
+            ClassNode handler = readTarget(targetClassName);
+            return handler != null
+                && Requirement.method("", "onGuiInit", "(Lnet/minecraft/client/gui/screens/Screen;)V").isPresentIn(handler)
+                && Requirement.method("", "onGuiOpen", "(Lnet/minecraft/client/gui/screens/Screen;)V").isPresentIn(handler)
+                && Requirement.method("", "updateForScreenRender", "(Lnet/minecraft/client/gui/screens/Screen;II)V").isPresentIn(handler)
+                && Requirement.method("", "drawForScreenBackground", "(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/gui/GuiGraphics;)V").isPresentIn(handler)
+                && Requirement.method("", "drawForScreenForeground", "(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/gui/GuiGraphics;II)V").isPresentIn(handler);
         }
         if (MINECOLONIES_ATTRIBUTE_MODIFIERS_MIXIN.equals(mixinClassName)) {
             return readEarlyBoolean("fixMineColoniesAttributeModifiers", true)
@@ -1151,12 +1187,22 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
         if ((MIXIN_PACKAGE + "JeiStartupGridRefreshMixin").equals(mixinClassName)) {
             return hasStartupGridRefreshContract(readTarget(targetClassName));
         }
+        if ((MIXIN_PACKAGE + "JeiStartupGridRefreshLegacyMixin").equals(mixinClassName)) {
+            return hasLegacyStartupGridRefreshContract(readTarget(targetClassName));
+        }
         if ((MIXIN_PACKAGE + "JeiNativeSearchBuilderMixin").equals(mixinClassName)) {
             boolean compatible = hasNativeSearchBuilderContract(readTarget(targetClassName));
             if (!compatible) {
                 LOGGER.info("JEI native bulk builder disabled: ElementSearch has no verified single-argument constructor build call; retaining native storage");
             }
             return compatible;
+        }
+        if ((MIXIN_PACKAGE + "JeiNativeSearchBuilder26Mixin").equals(mixinClassName)) {
+            return hasNativeSearchBuilder26Contract(readTarget(targetClassName));
+        }
+        if ((MIXIN_PACKAGE + "IngredientFilter26Mixin").equals(mixinClassName)) {
+            return hasIngredientFilter26Contract(readTarget(targetClassName))
+                && hasTooltipLowMemoryContract(readTarget("mezz.jei.common.config.IClientConfig"));
         }
         if ((MIXIN_PACKAGE + "ListElementInfoTooltipCaptureMixin").equals(mixinClassName)) {
             return shouldApplyTooltipCapture(targetClassName);
@@ -1347,6 +1393,46 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
             || Requirement.method("", "m_6213_", descriptor).isPresentIn(reload));
     }
 
+    static boolean hasLegacyStartupGridRefreshContract(ClassNode grid) {
+        String owner = "mezz/jei/gui/overlay/IngredientGridWithNavigation";
+        if (grid == null || !owner.equals(grid.name)) {
+            return false;
+        }
+        for (MethodNode method : grid.methods) {
+            if (!method.name.equals("lambda$new$0")
+                || !method.desc.equals("(Lmezz/jei/common/config/IClientConfig;)V")
+                || (method.access & (Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) != 0) {
+                continue;
+            }
+            int activeChecks = 0, settingReads = 0, layoutUpdates = 0;
+            for (AbstractInsnNode instruction : method.instructions) {
+                if (!(instruction instanceof MethodInsnNode invocation)) {
+                    int opcode = instruction.getOpcode();
+                    if (opcode >= 0 && opcode != Opcodes.ALOAD && opcode != Opcodes.ILOAD
+                        && opcode != Opcodes.ISTORE && opcode != Opcodes.IFEQ
+                        && opcode != Opcodes.IFNE && opcode != Opcodes.GOTO && opcode != Opcodes.RETURN) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (invocation.owner.equals(owner) && invocation.name.equals("isActive")
+                    && invocation.desc.equals("()Z")) {
+                    activeChecks++;
+                } else if (invocation.owner.equals("mezz/jei/common/config/IClientConfig")
+                    && invocation.name.equals("isAddingBookmarksToFrontEnabled") && invocation.desc.equals("()Z")) {
+                    settingReads++;
+                } else if (invocation.owner.equals(owner) && invocation.name.equals("updateLayout")
+                    && invocation.desc.equals("(Z)V")) {
+                    layoutUpdates++;
+                } else {
+                    return false;
+                }
+            }
+            return activeChecks == 1 && settingReads == 1 && layoutUpdates == 1;
+        }
+        return false;
+    }
+
     static boolean hasStartupGridRefreshContract(ClassNode grid) {
         if (grid == null) {
             return false;
@@ -1372,12 +1458,21 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
     }
 
     static boolean hasNativeSearchBuilderContract(ClassNode search) {
+        return hasNativeSearchBuilderContract(search, "(Lmezz/jei/gui/search/ElementPrefixParser;)V");
+    }
+
+    static boolean hasNativeSearchBuilder26Contract(ClassNode search) {
+        return hasNativeSearchBuilderContract(search, "(Lmezz/jei/gui/search/ElementPrefixParser;"
+            + "Ljava/util/Collection;Lmezz/jei/api/runtime/IIngredientManager;)V");
+    }
+
+    private static boolean hasNativeSearchBuilderContract(ClassNode search, String constructor) {
         if (search == null) { return false; }
         for (MethodNode method : search.methods) {
             // The packaged injector names this exact constructor. A build call in another
             // overload does not make that injection target available (GitHub issue #10).
             if (!method.name.equals("<init>")
-                || !method.desc.equals("(Lmezz/jei/gui/search/ElementPrefixParser;)V")) { continue; }
+                || !method.desc.equals(constructor)) { continue; }
             for (AbstractInsnNode instruction : method.instructions) {
                 if (instruction instanceof MethodInsnNode invocation
                     && invocation.owner.equals("mezz/jei/api/search/ISearchStorageBuilder")
@@ -1451,6 +1546,29 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
 
     private static boolean hasExactConstructor(ClassNode filter, String descriptor) {
         return filter != null && Requirement.method("", "<init>", descriptor).isPresentIn(filter);
+    }
+
+    static boolean hasIngredientFilter26Contract(ClassNode filter) {
+        if (filter == null) { return false; }
+        String constructor = "(Lmezz/jei/gui/filter/IFilterTextSource;Lmezz/jei/common/config/IClientConfig;"
+            + "Lmezz/jei/common/config/IIngredientFilterConfig;Lmezz/jei/api/runtime/IIngredientManager;"
+            + "Ljava/util/function/Function;Ljava/util/List;Lmezz/jei/api/helpers/IModIdHelper;"
+            + "Lmezz/jei/api/runtime/IIngredientVisibility;Lmezz/jei/gui/config/IngredientTypeSortingConfig;"
+            + "Lmezz/jei/api/helpers/IColorHelper;Lmezz/jei/api/search/ISearchStorageBuilderFactory;"
+            + "Lmezz/jei/common/config/IClientToggleState;)V";
+        if (!Requirement.method("", "notifyListenersOfChange", "()V").isPresentIn(filter)
+            || !Requirement.method("", "rebuildItemFilter", "()V").isPresentIn(filter)
+            || !Requirement.method("", "invalidateCache", "()V").isPresentIn(filter)
+            || !Requirement.field("", "elementSearch", "Lmezz/jei/gui/search/IElementSearch;").isPresentIn(filter)
+            || !Requirement.field("", "ingredientVisibility", "Lmezz/jei/api/runtime/IIngredientVisibility;").isPresentIn(filter)
+            || !Requirement.field("", "elementPrefixParser", "Lmezz/jei/gui/search/ElementPrefixParser;").isPresentIn(filter)
+            || !Requirement.field("", "clientConfig", "Lmezz/jei/common/config/IClientConfig;").isPresentIn(filter)) {
+            return false;
+        }
+        return new InvocationRequirement("<init>", constructor, "mezz/jei/gui/ingredients/IngredientFilter",
+            "createElementSearch", "(Lmezz/jei/common/config/IClientConfig;Lmezz/jei/gui/search/ElementPrefixParser;"
+                + "Ljava/util/List;Lmezz/jei/api/runtime/IIngredientManager;)Lmezz/jei/gui/search/IElementSearch;")
+            .isPresentIn(filter);
     }
 
     static boolean hasMineColoniesAttributeContract(ClassNode target) {
@@ -1657,7 +1775,7 @@ public final class JeiOptMixinPlugin implements IMixinConfigPlugin {
     }
 
     private static boolean hasExpectedGrindstoneRepairMethod(ClassNode target) {
-        //? if forge {
+        //? if forge || >=26.1 {
         return Requirement.method(
             "",
             "getRepairRecipes",

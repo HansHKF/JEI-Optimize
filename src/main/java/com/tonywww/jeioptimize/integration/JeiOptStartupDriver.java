@@ -23,6 +23,7 @@ public final class JeiOptStartupDriver {
 
     public static void onJeiStarting() {
         clearRuntimeWork();
+        com.tonywww.jeioptimize.instrumentation.JeiMemoryDiagnostics.begin(JeiOptRuntimeState.currentGeneration());
         JeiOptFilterBootstrap.begin(JeiOptRuntimeState.currentGeneration());
     }
 
@@ -49,6 +50,7 @@ public final class JeiOptStartupDriver {
     }
 
     public static void onJeiStopping() {
+        com.tonywww.jeioptimize.instrumentation.JeiMemoryDiagnostics.finish("stopped");
         long generation = JeiOptRuntimeState.currentGeneration();
         boolean cancelledStartup = JeiOptExecutors.cancelJeiStart();
         try {

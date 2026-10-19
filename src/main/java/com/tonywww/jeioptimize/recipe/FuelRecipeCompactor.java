@@ -4,7 +4,6 @@ import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.ingredients.IIngredientHelper;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.recipe.vanilla.IJeiFuelingRecipe;
 import mezz.jei.api.runtime.IIngredientManager;
 import mezz.jei.library.plugins.vanilla.cooking.fuel.FuelingRecipe;
@@ -29,14 +28,14 @@ public final class FuelRecipeCompactor {
 
         try {
             IIngredientHelper<ItemStack> helper = ingredientManager.getIngredientHelper(VanillaTypes.ITEM_STACK);
-            Map<Integer, Map<String, ItemStack>> inputsByBurnTime = new LinkedHashMap<>();
+            Map<Integer, Map<Object, ItemStack>> inputsByBurnTime = new LinkedHashMap<>();
             int originalInputCount = 0;
 
             for (IJeiFuelingRecipe recipe : recipes) {
                 if (recipe == null || recipe.getBurnTime() <= 0 || recipe.getInputs() == null) {
                     return recipes;
                 }
-                Map<String, ItemStack> inputs = inputsByBurnTime.computeIfAbsent(
+                Map<Object, ItemStack> inputs = inputsByBurnTime.computeIfAbsent(
                     recipe.getBurnTime(),
                     ignored -> new LinkedHashMap<>()
                 );
@@ -45,14 +44,14 @@ public final class FuelRecipeCompactor {
                         return recipes;
                     }
                     originalInputCount++;
-                    String uid = helper.getUniqueId(stack, UidContext.Recipe);
+                    Object uid = JeiIngredientUid.recipe(helper, stack);
                     inputs.putIfAbsent(uid, stack);
                 }
             }
 
             List<IJeiFuelingRecipe> compacted = new ArrayList<>(inputsByBurnTime.size());
             int compactedInputCount = 0;
-            for (Map.Entry<Integer, Map<String, ItemStack>> entry : inputsByBurnTime.entrySet()) {
+            for (Map.Entry<Integer, Map<Object, ItemStack>> entry : inputsByBurnTime.entrySet()) {
                 List<ItemStack> inputs = List.copyOf(entry.getValue().values());
                 compactedInputCount += inputs.size();
                 compacted.add(new FuelingRecipe(inputs, entry.getKey()));

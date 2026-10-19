@@ -4,6 +4,68 @@ All notable changes to Just Enough Threads are documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.14.5
+
+### Added
+
+- Optional `diagnostics.memoryDiagnostics` startup sampling for all three Minecraft targets.
+  Reports whole-JVM observed heap use, committed heap, non-heap use and GC collection count/time
+  changes without requesting garbage collection. The sampler ends on completion or cancellation,
+  and an obsolete startup cannot end a newer generation's sampler.
+- Reproducible full-pack memory comparison tooling with JFR, NMT, live-object histograms and
+  isolated test worlds. Tooltip benchmark queries can select the runtime's prefix.
+
+### Fixed
+
+- Match the verified legacy JEI 15/19 grid listener when coalescing startup layout notifications.
+  Batch visibility changes now refresh each sidebar grid once after runtime callbacks finish,
+  avoiding repeated filtering and sorting of the full ingredient list during bulk item hiding.
+  Data changes and non-grid listeners keep their original order; unknown listener ABIs retain
+  native behavior.
+
+### Validation
+
+- All three Minecraft targets built and passed 36 regression suites in total. Actual JEI 15/19
+  archives passed the legacy listener ABI checks, including rejection of unknown side effects.
+- Compared loading memory in full Minecraft 1.20.1 and 26.1.2 modpacks. In the single ATM9
+  before/after run, the fix reduced estimated cumulative allocations by 88.4% and GC collections
+  by 82.4%; post-GC live heap remained approximately 4.09 GiB. See
+  [the memory study](docs/memory-study-2026-10-13.md) for conditions and limitations.
+- Verified both new features in the Minecraft 1.21.1 development client: startup memory sampling
+  completed, 512 ingredient hide/restore operations preserved the final count and coalesced into
+  one grid refresh, and the sidebar completed 120 search calls. Diagnostic fixtures are excluded
+  from all release JARs.
+
+## 0.14.4
+
+### Added
+
+- Minecraft **26.1.2** support targeting **NeoForge 26.1.2.109**, **JEI 29.43.0.100+** and **Java 25**.
+  Added a separate ModDevGradle build while retaining the existing Forge 1.20.1 and NeoForge 1.21.1 targets.
+  The minimum JEI dependency is configured separately from the compile version, **29.43.0.107**.
+- Adapted ingredient indexing to JEI 29's exact filter and native search constructors, GUI extraction
+  and input events, recipe registration, and anvil, grindstone and fuel generation APIs.
+- Preserved object UID equality during recipe compaction and retained custom ingredient predicates
+  when an ingredient cannot be flattened safely. Category UI registration runs on the client thread
+  to accommodate Minecraft's font texture uploads.
+
+### Fixed
+
+- Known recipe callbacks that mutate runtime ingredients now run on the client thread. On Minecraft
+  26.1.2, ritual recipe text layout also runs there so font measurement can upload glyphs safely.
+  These built-in rules apply to existing configurations without changing `mainThreadPlugins`.
+
+### Validation
+
+- All three targets built and passed their regression suites, including the built-in plugin thread
+  policy. The 26.1.2 target was tested with **JEI 29.43.0.107** and checks the actual JEI 29 release
+  archive, including constructor gates and native builder/query comparisons. The installed
+  **JEI 29.43.0.106** archive also passed the ABI checks.
+- A fresh 26.1.2 client world completed startup, displayed the inventory sidebar, and ran 120 search
+  calls with both native indexing and the optional tooltip index. Tooltip validation also passed.
+  These runs used JEI and its required dependencies. The new recipe callback routing rules have
+  regression coverage; the updated build has not been retested in the full modpack.
+
 ## 0.14.3
 
 ### Fixed

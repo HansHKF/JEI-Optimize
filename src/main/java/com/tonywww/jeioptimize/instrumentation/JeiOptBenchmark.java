@@ -103,7 +103,11 @@ public final class JeiOptBenchmark {
             query.generation = JeiOptRuntimeState.currentGeneration();
             query.index = index;
             long started = System.nanoTime();
-            filter.setFilterText(QUERIES[index]);
+            String queryText = QUERIES[index];
+            if (queryText.startsWith("$")) {
+                queryText = System.getProperty("jet.benchmark.tooltipPrefix", "$") + queryText.substring(1);
+            }
+            filter.setFilterText(queryText);
             query.count = filter.getFilteredIngredients(VanillaTypes.ITEM_STACK).size();
             query.nanos = System.nanoTime() - started;
             query.commit();

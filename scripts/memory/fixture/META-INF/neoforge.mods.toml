@@ -1,0 +1,13 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+[[mods]]
+modId="jet_memory_fixture"
+version="0.0.0"
+displayName="Local JET memory validation fixture"
+[[dependencies.jet_memory_fixture]]
+modId="jei"
+type="required"
+versionRange="[19.27.0.340,)"
+ordering="AFTER"
+side="CLIENT"

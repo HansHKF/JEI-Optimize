@@ -20,8 +20,15 @@ ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${id}]]
+modId = "jei"
+type = "required"
+versionRange = "[${jeiMinimumVersion},)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies.${id}]]
 modId = "minecraft"
 type = "required"
-versionRange = "[${minecraftVersion},1.21.2)"
+versionRange = "${minecraftVersionRange}"
 ordering = "NONE"
 side = "BOTH"

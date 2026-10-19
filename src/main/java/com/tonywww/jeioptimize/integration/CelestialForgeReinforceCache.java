@@ -1,5 +1,7 @@
 package com.tonywww.jeioptimize.integration;
 
+import com.tonywww.jeioptimize.recipe.RecipeIngredientAccess;
+
 import com.tonywww.jeioptimize.runtime.JeiOptRuntimeState;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -62,11 +64,14 @@ public final class CelestialForgeReinforceCache {
         if (ingredient == null) {
             return null;
         }
-        net.minecraft.world.item.ItemStack[] items = ingredient.getItems();
+        if (!RecipeIngredientAccess.canFlatten(ingredient)) {
+            return ingredient;
+        }
+        net.minecraft.world.item.ItemStack[] items = RecipeIngredientAccess.items(ingredient);
         if (!isCacheableItemCount(items.length)) {
             return null;
         }
-        return Ingredient.of(Arrays.stream(items).map(net.minecraft.world.item.ItemStack::copy));
+        return RecipeIngredientAccess.ofStacks(Arrays.stream(items).map(net.minecraft.world.item.ItemStack::copy));
     }
 
     static boolean isCacheableItemCount(int itemCount) {

@@ -1,5 +1,7 @@
 package com.tonywww.jeioptimize.mixin.compat;
 
+import com.tonywww.jeioptimize.recipe.RecipeIngredientAccess;
+
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
 import com.tonywww.jeioptimize.integration.CelestialForgeReinforceCache;
 import com.tonywww.jeioptimize.integration.CelestialForgeReinforceInputPool;
@@ -45,9 +47,9 @@ public abstract class CelestialForgeReinforceRecipeMixin {
         if (JeiOptFeatureFlags.cacheCelestialForgeReinforce() && !aggressive) {
             CelestialForgeReinforceCache.putInput(this, input);
         }
-        if (aggressive && input != null) {
-            input = Ingredient.of(ItemStackRepresentativeSelector.selectFamilies(
-                java.util.Arrays.asList(input.getItems()),
+        if (aggressive && input != null && RecipeIngredientAccess.canFlatten(input)) {
+            input = RecipeIngredientAccess.ofStacks(ItemStackRepresentativeSelector.selectFamilies(
+                java.util.Arrays.asList(RecipeIngredientAccess.items(input)),
                 JeiOptFeatureFlags.aggressiveRepresentativesPerGroup()
             ).stream());
             callbackInfo.setReturnValue(input);

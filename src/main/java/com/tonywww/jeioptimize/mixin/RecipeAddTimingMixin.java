@@ -2,7 +2,6 @@ package com.tonywww.jeioptimize.mixin;
 
 import com.tonywww.jeioptimize.JeiOptimize;
 import com.tonywww.jeioptimize.config.JeiOptFeatureFlags;
-import mezz.jei.api.recipe.RecipeType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Unique;
@@ -23,14 +22,22 @@ public abstract class RecipeAddTimingMixin {
     private static final ThreadLocal<Long> jeiopt$addRecipesStart = new ThreadLocal<>();
 
     @Inject(method = "addRecipes", at = @At("HEAD"))
-    private void jeiopt$addRecipesStart(RecipeType<?> recipeType, List<?> recipes, CallbackInfo callbackInfo) {
+    private void jeiopt$addRecipesStart(mezz.jei.api.recipe.RecipeType<?> recipeType, List<?> recipes,
+        //? if >=26.1 {
+        /*net.minecraft.util.context.ContextMap contextMap,
+        *///?}
+        CallbackInfo callbackInfo) {
         if (JeiOptFeatureFlags.pluginTiming()) {
             jeiopt$addRecipesStart.set(System.nanoTime());
         }
     }
 
     @Inject(method = "addRecipes", at = @At("RETURN"))
-    private void jeiopt$addRecipesEnd(RecipeType<?> recipeType, List<?> recipes, CallbackInfo callbackInfo) {
+    private void jeiopt$addRecipesEnd(mezz.jei.api.recipe.RecipeType<?> recipeType, List<?> recipes,
+        //? if >=26.1 {
+        /*net.minecraft.util.context.ContextMap contextMap,
+        *///?}
+        CallbackInfo callbackInfo) {
         if (!JeiOptFeatureFlags.pluginTiming()) {
             return;
         }

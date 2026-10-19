@@ -16,6 +16,7 @@ public final class JeiOptConfigSnapshot {
         current = new Snapshot(
             JeiOptConfig.GENERAL_ENABLED.get(),
             JeiOptConfig.DIAGNOSTICS_TOOLTIP_SEARCH_METRICS.get(),
+            JeiOptConfig.DIAGNOSTICS_MEMORY.get(),
             JeiOptConfig.ASYNC_TOOLTIP_SEARCH_INDEX.get(),
             JeiOptConfig.SYNC_TOOLTIP_STRING_CACHE.get() && JeiOptConfig.SYNC_CACHE_SCOPE.get(),
             JeiOptConfig.SYNC_FIX_MINECOLONIES_ATTRIBUTE_MODIFIERS.get(),
@@ -46,6 +47,7 @@ public final class JeiOptConfigSnapshot {
     record Snapshot(
         boolean enabled,
         boolean tooltipSearchMetrics,
+        boolean memoryDiagnostics,
         boolean tooltipSearchIndex,
         boolean tooltipStringCache,
         boolean fixMineColoniesAttributeModifiers,

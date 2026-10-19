@@ -1,0 +1,21 @@
+// Explicit development fixture, outside all production source sets.
+allprojects {
+    afterEvaluate { project ->
+        if (project.name == '1.21.1-neoforge') {
+            def compileFixture = project.tasks.register('compileMemoryFixture', JavaCompile) {
+                source project.rootProject.file('scripts/memory/MemoryFixture.java')
+                classpath = project.extensions.getByType(SourceSetContainer).getByName('main').compileClasspath
+                destinationDirectory = project.rootProject.layout.projectDirectory.dir('build/memory-fixture/classes')
+                javaCompiler = project.javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+                options.release = 21
+            }
+            project.tasks.register('memoryFixtureJar', Jar) {
+                dependsOn compileFixture
+                from compileFixture.map { it.destinationDirectory }
+                from project.rootProject.file('scripts/memory/fixture')
+                archiveFileName = 'jet-memory-fixture.jar'
+                destinationDirectory = project.rootProject.layout.projectDirectory.dir('build/memory-fixture')
+            }
+        }
+    }
+}

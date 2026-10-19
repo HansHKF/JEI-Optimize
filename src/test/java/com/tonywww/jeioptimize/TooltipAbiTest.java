@@ -21,6 +21,7 @@ import java.util.zip.ZipFile;
 public final class TooltipAbiTest {
     public static void main(String[] arguments) throws IOException {
         verifyPluginCallbackRoutingContract();
+        verifyLegacyGridRefreshContract();
         verifyRenderPreparationGuard();
         verifyNativeSearchBuilderContract();
         verifyModernIngredientFilterConstructorContract();
@@ -98,6 +99,15 @@ public final class TooltipAbiTest {
                         ClassNode search = new ClassNode();
                         new ClassReader(source).accept(search, 0);
                         boolean supported = JeiOptMixinPlugin.hasNativeSearchBuilderContract(search);
+                        if (argument.contains("jei-26.1.2-")) {
+                            check(!supported && JeiOptMixinPlugin.hasNativeSearchBuilder26Contract(search),
+                                "JEI 29 enables only its exact native builder constructor");
+                            var ctor = search.methods.stream().filter(method -> method.name.equals("<init>")).findFirst().orElseThrow();
+                            String original = ctor.desc;
+                            ctor.desc = "()V";
+                            check(!JeiOptMixinPlugin.hasNativeSearchBuilder26Contract(search), "changed JEI 29 builder constructor rejected");
+                            ctor.desc = original;
+                        }
                         boolean hasTargetConstructor = search.methods.stream().anyMatch(method -> method.name.equals("<init>")
                             && method.desc.equals("(Lmezz/jei/gui/search/ElementPrefixParser;)V"));
                         check(!supported || hasTargetConstructor, "released native builder requires its injection constructor");
@@ -119,6 +129,15 @@ public final class TooltipAbiTest {
                     boolean supported = branch != null;
                     System.out.println("Ingredient filter constructor ABI: " + Path.of(argument).getFileName()
                         + " supported=" + supported + " branch=" + branch);
+                    if (argument.contains("jei-26.1.2-")) {
+                        check(JeiOptMixinPlugin.hasIngredientFilter26Contract(filter),
+                            "JEI 29 enables only its exact filter constructor and factory call");
+                        var field = filter.fields.stream().filter(candidate -> candidate.name.equals("elementSearch")).findFirst().orElseThrow();
+                        String original = field.desc;
+                        field.desc = "Ljava/lang/Object;";
+                        check(!JeiOptMixinPlugin.hasIngredientFilter26Contract(filter), "changed JEI 29 shadow field rejected");
+                        field.desc = original;
+                    }
                     if (argument.contains("19.56.0.441") || argument.contains("19.57.0.446")
                         || argument.contains("19.57.0.450") || argument.contains("15.62.0.219")) {
                         check("sorting-config".equals(branch),
@@ -134,15 +153,23 @@ public final class TooltipAbiTest {
                     }
                 }
                 var gridEntry = archive.getEntry("mezz/jei/gui/overlay/ingredients/IngredientGridWithNavigation.class");
+                if (gridEntry == null) {
+                    gridEntry = archive.getEntry("mezz/jei/gui/overlay/IngredientGridWithNavigation.class");
+                }
                 if (gridEntry != null) {
                     try (InputStream source = archive.getInputStream(gridEntry)) {
                         ClassNode realGrid = new ClassNode();
                         new ClassReader(source).accept(realGrid, 0);
                         boolean supported = JeiOptMixinPlugin.hasStartupGridRefreshContract(realGrid);
+                        boolean legacySupported = JeiOptMixinPlugin.hasLegacyStartupGridRefreshContract(realGrid);
+                        if (argument.contains("15.20.") || argument.contains("19.27.")) {
+                            check(legacySupported && !supported, "legacy listener batching matches its own ABI " + argument);
+                        }
                         if (argument.contains("15.59.0.212")) {
                             check(supported, "ATM9 grid refresh contract");
                         }
-                        System.out.println("Grid refresh ABI: " + Path.of(argument).getFileName() + " supported=" + supported);
+                        System.out.println("Grid refresh ABI: " + Path.of(argument).getFileName()
+                            + " supported=" + supported + " legacySupported=" + legacySupported);
                     }
                 }
                 try (InputStream source = archive.getInputStream(archive.getEntry("mezz/jei/common/config/IClientConfig.class"))) {
@@ -170,6 +197,30 @@ public final class TooltipAbiTest {
             }
         }
         System.out.println("TooltipAbiTest passed");
+    }
+
+    private static void verifyLegacyGridRefreshContract() {
+        check(!JeiOptMixinPlugin.hasLegacyStartupGridRefreshContract(null), "missing legacy grid rejected");
+        ClassNode grid = new ClassNode();
+        grid.name = "mezz/jei/gui/overlay/IngredientGridWithNavigation";
+        MethodNode listener = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_SYNTHETIC,
+            "lambda$new$0", "(Lmezz/jei/common/config/IClientConfig;)V", null, null);
+        grid.methods.add(listener);
+        check(!JeiOptMixinPlugin.hasLegacyStartupGridRefreshContract(grid), "empty listener rejected");
+        listener.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, grid.name, "isActive", "()Z", false));
+        listener.instructions.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE,
+            "mezz/jei/common/config/IClientConfig", "isAddingBookmarksToFrontEnabled", "()Z", true));
+        listener.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, grid.name, "updateLayout", "(Z)V", false));
+        check(JeiOptMixinPlugin.hasLegacyStartupGridRefreshContract(grid), "verified JEI 15/19 grid-only listener");
+        listener.desc = "()V";
+        check(!JeiOptMixinPlugin.hasLegacyStartupGridRefreshContract(grid), "changed captured argument rejected");
+        listener.desc = "(Lmezz/jei/common/config/IClientConfig;)V";
+        var fieldWrite = new org.objectweb.asm.tree.FieldInsnNode(Opcodes.PUTFIELD, grid.name, "unknownState", "Z");
+        listener.instructions.add(fieldWrite);
+        check(!JeiOptMixinPlugin.hasLegacyStartupGridRefreshContract(grid), "unknown field writes are not deferred");
+        listener.instructions.remove(fieldWrite);
+        listener.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "other/Handler", "changeState", "()V", false));
+        check(!JeiOptMixinPlugin.hasLegacyStartupGridRefreshContract(grid), "unrelated side effects are not deferred");
     }
 
     private static void verifyPluginCallbackRoutingContract() throws IOException {

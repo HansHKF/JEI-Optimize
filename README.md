@@ -1,6 +1,6 @@
 # Just Enough Threads
 
-A Minecraft mod for **Forge (1.20.1)** and **NeoForge (1.21.1)** that speeds up [JEI (Just Enough Items)](https://www.curseforge.com/minecraft/mc-mods/jei) startup by moving its heaviest work off the main thread and across CPU cores.
+A Minecraft mod for **Forge (1.20.1)** and **NeoForge (1.21.1 and 26.1.2)** that speeds up [JEI (Just Enough Items)](https://www.curseforge.com/minecraft/mc-mods/jei) startup by moving its heaviest work off the main thread and across CPU cores.
 
 In large modpacks, JEI spends several seconds building its ingredient search index and processing recipes while the game sits on the loading screen. Just Enough Threads removes the biggest of those costs from the loading screen and replaces expensive generated anvil and grindstone combinations with compact representative sets, so you get into your world sooner without losing recipe coverage.
 
@@ -58,10 +58,11 @@ Results vary with hardware and pack size. Measure your own with `scripts/measure
 |-----------|--------|-----|
 | 1.20.1 | Forge 47.4.4+ | 15.20.0.120 |
 | 1.21.1 | NeoForge 21.1.x | 19.27.0.340 |
+| 26.1.2 | NeoForge 26.1.2.109+ | 29.43.0.100+ |
 
-Client-side only. JEI is a required dependency.
+Client-side only. JEI is a required dependency. The Minecraft 26.1.2 build accepts JEI 29.43.0.100 and newer, and is compiled and tested with JEI 29.43.0.107. It also requires Java 25 and JEI's MezzConfig dependency (0.6.3 for JEI 29.43.0.107).
 
-Because the mod hooks JEI's internal classes, each build is tied to the JEI version above. A very different JEI build may move the internals it patches - keep JEI on the listed version (or rebuild the mod against your JEI).
+Because the mod hooks JEI's internal classes, a very different JEI build may move the internals it patches. Use the listed versions or rebuild the mod against your JEI if its internals change.
 
 ## Configuration
 
@@ -70,7 +71,8 @@ Config file: `config/justenoughthreads-client.toml`
 When upgrading from an older release, `config/jei_optimize-client.toml` is copied automatically if
 the new file does not exist. The legacy file is left untouched and never overwrites a new config.
 JEI's built-in creative-tab enumeration and GUI runtime construction stay on the client thread
-automatically and do not need entries in `mainThreadPlugins`.
+automatically and do not need entries in `mainThreadPlugins`. The same applies to known recipe
+callbacks that modify runtime ingredients or, on Minecraft 26.1.2, lay out ritual text using fonts.
 
 | Option | Section | Default | Description |
 |--------|---------|---------|-------------|
@@ -82,6 +84,7 @@ automatically and do not need entries in `mainThreadPlugins`.
 | `workerThreads` | async | `0` | Worker count for derived tasks; `0` selects CPU cores minus two, clamped to 1-8. |
 | `parallelThreshold` | async | `250` | Minimum immutable snapshot count before pure index work uses multiple workers. |
 | `pluginTiming` | diagnostics | `false` | Log per-plugin, per-phase JEI startup timings (for measurement). |
+| `memoryDiagnostics` | diagnostics | `false` | Sample whole-JVM heap use every 250 ms during JEI startup; log the observed peak and GC count/time changes. No explicit GC is requested; these values are not JEI-owned or retained heap sizes. |
 | `registrationCounts` | diagnostics | `false` | Log per-plugin recipe and ingredient registration counts. |
 | `stallWatchdog` | diagnostics | `true` | Sample and report code responsible for a JEI phase that exceeds the configured threshold. |
 | `disableAnvilRepairRecipes` | jeiContent | `false` | Hide all generated anvil repair recipes. Overrides representative optimization for this recipe class. |
@@ -111,23 +114,37 @@ Remaining flags in the file are experimental and off by default.
 
 `scripts/measure-optimizations.ps1` helps you run a before/after comparison of JEI startup timings in your own instance. See [docs/optimization-measurement.md](docs/optimization-measurement.md) for the full procedure.
 
+For loading memory, allocation stacks and retained-object analysis, see the [three-version memory study](docs/memory-study-2026-10-13.md) and `scripts/test-jei-memory.ps1`.
+
 ## Building
 
-Gradle must run on JDK 21. The Forge (1.20.1) target compiles to Java 17; the NeoForge (1.21.1) target compiles to Java 21.
+Run Gradle on JDK 21 or newer. The Forge (1.20.1) target compiles to Java 17, NeoForge (1.21.1) to Java 21, and NeoForge (26.1.2) to Java 25. A JDK 25 toolchain must be available to build the 26.1.2 target.
 
     ./gradlew build
 
-`build` compiles and jars **both loaders**. The jars land in each version's build folder:
+`build` compiles and jars **all three targets**. The jars land in each version's build folder:
 
     versions/1.20.1-forge/build/libs/justenoughthreads-<version>+1.20.1.jar
     versions/1.21.1-neoforge/build/libs/justenoughthreads-<version>+1.21.1.jar
+    versions/26.1.2-neoforge/build/libs/justenoughthreads-<version>+26.1.2.jar
+
+Build or launch the new target separately:
+
+    ./gradlew :26.1.2-neoforge:build
+    ./gradlew :26.1.2-neoforge:runClient
+
+Minecraft 26.1.2 uses ModDevGradle and unobfuscated names; its ordinary JAR is the release artifact. The older targets continue to use Loom and remapped JARs. JEI 29 uses separate constructor checks for native indexing, the GUI extraction API, object UIDs, and the new recipe registration signatures. Category UI registration runs on the client thread because font measurement can upload glyphs in this Minecraft version.
+
+For an existing test world in the target's run directory:
+
+    ./scripts/test-jei-compat.ps1 -Loader neoforge -MinecraftVersion 26.1.2 -World port-test -RequireSidebar
 
 ### Publishing
 
 `scripts/dryrun.ps1` and `scripts/publish.ps1` build every loader and push the release to CurseForge via the `mod-publish-plugin`:
 
-    ./scripts/dryrun.ps1     # build both loaders, validate the pipeline, upload NOTHING
-    ./scripts/publish.ps1    # build both loaders, then publish to CurseForge (asks to confirm)
+    ./scripts/dryrun.ps1     # build all targets, validate the pipeline, upload NOTHING
+    ./scripts/publish.ps1    # build all targets, then publish to CurseForge (asks to confirm)
 
 The upload token is read from the `CURSEFORGE_TOKEN` environment variable, or `curseforge.token` in your user-level `~/.gradle/gradle.properties` (never commit it). The numeric `curseforge.projectId` lives in `gradle.properties`.
 

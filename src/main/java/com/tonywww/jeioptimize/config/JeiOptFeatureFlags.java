@@ -23,6 +23,12 @@ public final class JeiOptFeatureFlags {
         return enabled() && JeiOptConfig.DIAGNOSTICS_PLUGIN_TIMING.get();
     }
 
+    public static boolean memoryDiagnostics() {
+        JeiOptConfigSnapshot.Snapshot snapshot = JeiOptConfigSnapshot.current();
+        return enabled() && (snapshot != null ? snapshot.memoryDiagnostics()
+            : configReady() && JeiOptConfig.DIAGNOSTICS_MEMORY.get());
+    }
+
     public static boolean registrationCounts() {
         return enabled() && JeiOptConfig.DIAGNOSTICS_REGISTRATION_COUNTS.get();
     }
